@@ -2,6 +2,11 @@
 
 module.exports = {
   root: true,
+  globals: {
+    vm: true,
+    // 首页winform提供的接口对象
+    IndexActions: true
+  },
   parser: 'babel-eslint',
   parserOptions: {
     sourceType: 'module'

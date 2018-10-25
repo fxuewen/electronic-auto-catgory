@@ -9,7 +9,8 @@
                 <span class="aside-header-title">卷宗目录</span>
                 <a class="aside-header-reset">重置</a>
               </div>
-              <select-catgory></select-catgory>
+              <select-catgory v-if="this.treeData.length === 0"></select-catgory>
+              <catgory-tree v-else :treeData="treeData" :propMessage="'1111111'"></catgory-tree>
             </el-aside>
             <el-main>
               <div class="main-header">
@@ -26,24 +27,54 @@ import Vue from 'vue'
 import Component from 'vue-class-component'
 import SelectCatgory from '@/components/SelectCatgory.vue'
 import NoFile from '@/components/NoFile.vue'
+import CatgoryTree from '@/components/CatgoryTree.vue'
 
 @Component({
-  components: { SelectCatgory, NoFile }
+  components: { SelectCatgory, NoFile, CatgoryTree }
 })
 export default class Main extends Vue {
-  msg: string = ''
-  name: string = ''
-
-  data() {
-    return {
-      // Will be reactive
-      msg: 'msg',
-      name: 'name'
-    }
-  }
+  msg: string = 'vue-component-class'
+  addDirectories: Array<Object> = []
+  addFiles: Array<Object> = []
+  addMenuFiles: Array<Object> = []
+  treeData: Array<Object> = [
+    // {
+    //   name: '根目录',
+    //   address: '',
+    //   children: [
+    //     {
+    //       name: '1-卷宗文件夹',
+    //       address: '',
+    //       children: [
+    //         {
+    //           name: '1-1-卷宗文件夹',
+    //           address: '',
+    //           children: [
+    //             { name: '5.jpg', address: '', children: [] },
+    //             { name: '6.jpg', address: '', children: [] }
+    //           ]
+    //         },
+    //         { name: '1.jpg', address: '', children: [] },
+    //         { name: '2.jpg', address: '', children: [] }
+    //       ]
+    //     },
+    //     {
+    //       name: '2-卷宗文件夹',
+    //       address: '',
+    //       children: [
+    //         { name: '3.jpg', address: '', children: [] },
+    //         { name: '4.jpg', address: '', children: [] }
+    //       ]
+    //     }
+    //   ]
+    // }
+  ]
 
   created() {
-    console.log(`created:${this.name}`)
+    this.$root.$data.eventHub.$on('index', function(data: Object) {
+      console.log('data from winform emit')
+      console.log(data)
+    })
   }
 
   // 计算属性
@@ -52,11 +83,7 @@ export default class Main extends Vue {
   }
 
   mounted() {
-    console.log(`mounted:${this.name}`)
-  }
-
-  getMsg(): string {
-    return this.msg
+    // console.log(`mounted:${this.msg}`)
   }
 }
 </script>

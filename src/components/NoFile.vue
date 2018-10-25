@@ -31,7 +31,7 @@ export default class SelectCatgory extends Vue {
   }
 
   created() {
-    console.log(`created:${this.name}`)
+    // console.log(`created:${this.name}`)
   }
 
   // 计算属性
@@ -40,7 +40,7 @@ export default class SelectCatgory extends Vue {
   }
 
   mounted() {
-    console.log(`mounted:${this.name}`)
+    // console.log(`mounted:${this.name}`)
   }
 
   getMsg(): string {

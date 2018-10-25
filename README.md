@@ -145,7 +145,3 @@ vuex使用：https://github.com/ktsn/vuex-class
 
 Watch，Inject等高级用法：https://github.com/kaorun343/vue-property-decorator
 
-## 交流
-
-有问题或建议欢迎大象我 zhangren
-
