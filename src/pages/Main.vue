@@ -4,13 +4,13 @@
           <span class="header-title">卷宗自动编目</span>
         </el-header>
         <el-container class="main-content">
-            <el-aside width="260px">
+            <el-aside width="360px">
               <div class="aside-header">
                 <span class="aside-header-title">卷宗目录</span>
-                <a class="aside-header-reset">重置</a>
+                <a class="aside-header-reset" @click="reset">重置</a>
               </div>
-              <select-catgory v-if="this.treeData.length === 0"></select-catgory>
-              <catgory-tree v-else :treeData="treeData" :propMessage="'1111111'"></catgory-tree>
+              <select-catgory v-if="treeData.length === 0"></select-catgory>
+              <catgory-tree v-else :treeData="treeData"></catgory-tree>
             </el-aside>
             <el-main>
               <div class="main-header">
@@ -33,57 +33,46 @@ import CatgoryTree from '@/components/CatgoryTree.vue'
   components: { SelectCatgory, NoFile, CatgoryTree }
 })
 export default class Main extends Vue {
-  msg: string = 'vue-component-class'
   addDirectories: Array<Object> = []
   addFiles: Array<Object> = []
   addMenuFiles: Array<Object> = []
-  treeData: Array<Object> = [
+  treeData: any = [
     // {
+    //   fullName: '',
     //   name: '根目录',
-    //   address: '',
+    //   path: '',
+    //   type: 0,
     //   children: [
     //     {
-    //       name: '1-卷宗文件夹',
-    //       address: '',
-    //       children: [
-    //         {
-    //           name: '1-1-卷宗文件夹',
-    //           address: '',
-    //           children: [
-    //             { name: '5.jpg', address: '', children: [] },
-    //             { name: '6.jpg', address: '', children: [] }
-    //           ]
-    //         },
-    //         { name: '1.jpg', address: '', children: [] },
-    //         { name: '2.jpg', address: '', children: [] }
-    //       ]
-    //     },
-    //     {
-    //       name: '2-卷宗文件夹',
-    //       address: '',
-    //       children: [
-    //         { name: '3.jpg', address: '', children: [] },
-    //         { name: '4.jpg', address: '', children: [] }
-    //       ]
+    //       fullName: '',
+    //       name: '文件夹1',
+    //       path: '',
+    //       type: 0,
+    //       children: []
     //     }
     //   ]
     // }
   ]
 
   created() {
-    this.$root.$data.eventHub.$on('index', function(data: Object) {
+    this.$root.$data.eventHub.$on('index', (data: any) => {
       console.log('data from winform emit')
       console.log(data)
+      this.updateTreeData(data.addDirectories)
     })
   }
 
-  // 计算属性
-  get computedMsg() {
-    return 'computed ' + this.msg
+  mounted() {
+    // console.log(`mounted:${this.treeData}`)
   }
 
-  mounted() {
-    // console.log(`mounted:${this.msg}`)
+  // 更新树形结构数据
+  updateTreeData(data: Array<Object>) {
+    this.treeData = data
+  }
+
+  reset() {
+    this.treeData = []
   }
 }
 </script>

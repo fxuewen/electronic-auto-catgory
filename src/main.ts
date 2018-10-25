@@ -6,6 +6,9 @@ import router from './router'
 import ElementUi from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import './sass/default.scss'
+// 引入图标库
+import './sass/icons/iconfont.css'
+import './sass/icons/iconfont.js'
 // 自定义window上的参数
 import './typings/ts-declare'
 
