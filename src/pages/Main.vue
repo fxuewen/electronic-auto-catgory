@@ -10,13 +10,14 @@
                 <a class="aside-header-reset" @click="reset">重置</a>
               </div>
               <select-catgory v-if="treeData.length === 0"></select-catgory>
-              <catgory-tree v-else :treeData="treeData"></catgory-tree>
+              <catgory-tree v-else :treeData.sync="treeData"></catgory-tree>
             </el-aside>
             <el-main>
               <div class="main-header">
                 <span class="main-header-title">目录制作</span>
               </div>
-              <no-file></no-file>
+              <no-file v-if="treeData.length === 0"></no-file>
+              <file-list v-else :treeData.sync="treeData"></file-list>
             </el-main>
         </el-container>
     </el-container>
@@ -28,9 +29,10 @@ import Component from 'vue-class-component'
 import SelectCatgory from '@/components/SelectCatgory.vue'
 import NoFile from '@/components/NoFile.vue'
 import CatgoryTree from '@/components/CatgoryTree.vue'
+import FileList from '@/components/FileList.vue'
 
 @Component({
-  components: { SelectCatgory, NoFile, CatgoryTree }
+  components: { SelectCatgory, NoFile, CatgoryTree, FileList }
 })
 export default class Main extends Vue {
   addDirectories: Array<Object> = []
