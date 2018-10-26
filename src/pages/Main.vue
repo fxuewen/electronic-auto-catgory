@@ -2,6 +2,10 @@
     <el-container class="auto-catgory-container">
         <el-header>
           <span class="header-title">卷宗自动编目</span>
+          <span class="header-title-btns">
+            <span cfx-ui-command="minimize" class="iconfont icon-zuixiaohua" title="最小化"></span>
+            <span cfx-ui-command="close" class="iconfont icon-guanbi" title="关闭"></span>
+          </span>
         </el-header>
         <el-container class="main-content">
             <el-aside width="360px">
@@ -99,6 +103,13 @@ $clickBlue: #2e96f7;
 
     .header-title {
       font-size: 18px;
+    }
+
+    .header-title-btns {
+      float: right;
+      span {
+        cursor: pointer;
+      }
     }
   }
 
