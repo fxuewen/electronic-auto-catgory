@@ -16,8 +16,8 @@
               <div class="main-header">
                 <span class="main-header-title">目录制作</span>
               </div>
-              <no-file v-if="treeData.length === 0"></no-file>
-              <file-list v-else :treeData.sync="treeData"></file-list>
+              <no-file v-if="!selectTreeNode"></no-file>
+              <file-list v-else :selectTreeNode.sync="selectTreeNode"></file-list>
             </el-main>
         </el-container>
     </el-container>
@@ -55,12 +55,16 @@ export default class Main extends Vue {
     //   ]
     // }
   ]
+  selectTreeNode: any = null
 
   created() {
     this.$root.$data.eventHub.$on('index', (data: any) => {
       console.log('data from winform emit')
       console.log(data)
       this.updateTreeData(data.addDirectories)
+    })
+    this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
+      this.selectTreeNode = node
     })
   }
 
@@ -75,6 +79,7 @@ export default class Main extends Vue {
 
   reset() {
     this.treeData = []
+    this.selectTreeNode = null
   }
 }
 </script>

@@ -1,6 +1,6 @@
 <template>
     <div class="catgory-tree-container">
-      <el-tree :data="treeData" :props="defaultProps">
+      <el-tree ref="elTree" :data="treeData" :props="defaultProps"  highlight-current node-key="fullName" @current-change="currentNodeChange">
         <span class="custom-tree-node" slot-scope="{ node, data }">
           <span class="custom-tree-node-label">
             <span class="custom-tree-node-icon">
@@ -74,13 +74,28 @@ export default class CatgoryTree extends Vue {
     children: 'children',
     label: 'name'
   }
+  // 树vue实例
+  elTree: any = null
 
   created() {
     // console.log(`created:${this.$props.treeData}`)
   }
 
   mounted() {
-    console.log(this.$props.treeData)
+    this.$nextTick(function() {
+      this.elTree = this.$refs.elTree
+      const currentKey: string = this.$props.treeData[0].fullName
+      this.elTree.setCurrentKey(currentKey)
+      const currentNodeData = this.elTree.getCurrentNode()
+      const currentNode = this.elTree.getNode(currentNodeData)
+      console.log('currentNode')
+      console.log(currentNode)
+      this.$root.$data.eventHub.$emit('setSelectTreeNode', currentNode)
+    })
+  }
+
+  currentNodeChange(data, node) {
+    this.$root.$data.eventHub.$emit('setSelectTreeNode', node)
   }
 
   add() {}

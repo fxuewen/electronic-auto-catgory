@@ -17,7 +17,8 @@
     "typeRoots": [
       // add path to @types
       "node_modules/@types",
-      "node_modules/vue/types"
+      "node_modules/vue/types",
+      "node_modules/element-ui/types"
     ],
     // 以严格模式解析
     "strict": true,
