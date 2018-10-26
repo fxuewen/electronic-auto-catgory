@@ -13,38 +13,16 @@
 import Vue from 'vue'
 import Component from 'vue-class-component'
 
-@Component({
-  props: {
-    propMessage: String
-  }
-})
+@Component
 export default class SelectCatgory extends Vue {
   msg: string = 'Welcome to Your Vue.js App'
-  name: string = ''
-
-  data() {
-    return {
-      // Will be reactive
-      msg: 'msg',
-      name: 'name'
-    }
-  }
 
   created() {
     // console.log(`created:${this.name}`)
   }
 
-  // 计算属性
-  get computedMsg() {
-    return 'computed ' + this.msg
-  }
-
   mounted() {
     // console.log(`mounted:${this.name}`)
-  }
-
-  getMsg(): string {
-    return this.msg
   }
 }
 </script>

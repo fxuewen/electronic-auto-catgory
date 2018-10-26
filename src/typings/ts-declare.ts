@@ -3,12 +3,11 @@ declare global {
         vm: Object,
         // 首页winform提供的接口对象
         IndexActions: {
-            getFiles:Function,
-
+            loadData: Function,
+            getFiles: Function,
+            getMenuFile: Function,
+            getDirectoryInfo: Function,
         }
     }
-    // interface IndexActions{
-    //     GetFiles:Function,
-    // }
 }
 export default global;
