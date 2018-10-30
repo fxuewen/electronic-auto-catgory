@@ -1,6 +1,6 @@
 <template>
     <div class="file-list-container">
-      <div class="file-list-content" ref="fileListContent" @dragenter="dragEnter($event)">
+      <div class="file-list-content" ref="fileListContent">
         <div v-if="!selectTreeNode.data.children.length" class="item-file">
           <div class="item-header file">图片文件</div>
           <div class="item-content lev1-file-content">
@@ -10,17 +10,18 @@
             </div>
           </div>
         </div>
-        <div :class="{'item-folder': item1.type==1, 'item-file': item1.type !=1}" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1">
+        <div :class="{'item-folder': item1.type==1, 'item-file': item1.type !=1}" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1"
+          @dragenter="dragenter($event)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)" @drop='drop($event, item1)'>
           <div :class="['item-header', {'folder': item1.type==1, 'file': item1.type==0}]">图片文件</div>
-          <div v-if="item1.type==0" class="item-content lev1-file-content" draggable="true"
-            @dragstart="dragstart($event,item1)"  @drop='drop($event, item1)' @dragover='dragover($event, item1)'>
+          <div v-if="item1.type==0" class="item-content lev1-file-content" 
+            draggable="true" @dragstart="dragstart($event,item1)">
             <div>
               <div class="item-content-icon"></div>
               <div class="item-content-text">{{item1.name}}</div>
             </div>
           </div>
           <div v-else class="item-content lev1-folder-content" :style="{width: itemWidth}" v-for="(item2, index2) in item1.children" v-bind:key="index2"
-            @dragstart="dragstart($event, item2)"  @drop='drop($event, item1)' @dragover='dragover($event, item1)'>
+            draggable="true" @dragstart="dragstart($event, item2)">
             <div :class="{'lev2-folder-content': item2.type==1, 'lev2-file-content': item2.type==0}">
               <div class="item-content-icon"></div>
               <div class="item-content-text">{{item2.name}}</div>
@@ -79,7 +80,7 @@ export default class FileList extends Vue {
 
   // 当被鼠标拖动的对象进入其容器范围内时触发此事件
   dragenter(event) {
-    event.preventDefault()
+    console.log('dragenter')
   }
 
   // 当某被拖动的对象在另一对象容器范围内拖动时触发此事件
@@ -88,7 +89,9 @@ export default class FileList extends Vue {
   }
 
   // 当被鼠标拖动的对象离开其容器范围内时触发此事件
-  dragleave(event) {}
+  dragleave(event) {
+    console.log('dragleave')
+  }
 
   //  在一个拖动过程中，释放鼠标键时触发此事件
   drop(event, data: FileObject): void {
@@ -127,7 +130,7 @@ export default class FileList extends Vue {
         }
         newFolder.children.push(this.dragData)
         newFolder.children.push(targetData)
-        listData.children.push(newFolder)
+        listData.children.splice(index, 0, newFolder)
       }
     }
   }
