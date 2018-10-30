@@ -23,6 +23,7 @@
 <script lang="ts">
 import Vue from 'vue'
 import Component from 'vue-class-component'
+import { FileListChangeData } from '../typings/FileObject'
 
 @Component({
   props: {
@@ -79,6 +80,7 @@ export default class CatgoryTree extends Vue {
 
   created() {
     // console.log(`created:${this.$props.treeData}`)
+    this.$root.$data.eventHub.$on('fileListChange', this.fileListChange)
   }
 
   mounted() {
@@ -94,15 +96,36 @@ export default class CatgoryTree extends Vue {
     })
   }
 
+  // 当前节点变化
   currentNodeChange(data, node) {
     this.$root.$data.eventHub.$emit('setSelectTreeNode', node)
   }
 
+  // 添加
   add() {}
 
+  // 删除
   remove() {}
 
+  // 编辑
   edit() {}
+
+  fileListChange(data: FileListChangeData) {
+    console.log('drag data change')
+    console.log(data.selects, data.target)
+  }
+
+  // 文件移动到文件夹
+  file2Folder() {}
+
+  // 文件移动到文件
+  file2file() {}
+
+  // 文件移动到文件夹外
+  folder2out() {}
+
+  // 文件夹到文件夹(相邻的文件夹是否顺移操作)
+  folder2folder() {}
 }
 </script>
 

@@ -1,6 +1,7 @@
 <template>
     <div class="file-list-container">
-      <div class="file-list-content" ref="fileListContent">
+      <div class="file-list-content" ref="fileListContent"
+        @dragenter="dragenter($event)" @drop='drop($event)'  @dragover='dragover($event)'>
         <div v-if="!selectTreeNode.data.children.length" class="item-file">
           <div class="item-header file">图片文件</div>
           <div class="item-content lev1-file-content">
@@ -10,7 +11,7 @@
             </div>
           </div>
         </div>
-        <div :class="{'item-folder': item1.type==1, 'item-file': item1.type !=1}" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1"
+        <div v-else :class="{'item-folder': item1.type==1, 'item-file': item1.type !=1}" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1"
           @dragenter="dragenter($event)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)" @drop='drop($event, item1)'>
           <div :class="['item-header', {'folder': item1.type==1, 'file': item1.type==0}]">图片文件</div>
           <div v-if="item1.type==0" class="item-content lev1-file-content" 
@@ -21,7 +22,7 @@
             </div>
           </div>
           <div v-else class="item-content lev1-folder-content" :style="{width: itemWidth}" v-for="(item2, index2) in item1.children" v-bind:key="index2"
-            draggable="true" @dragstart="dragstart($event, item2)">
+            draggable="true" @dragstart="dragstart($event, item2, item1)">
             <div :class="{'lev2-folder-content': item2.type==1, 'lev2-file-content': item2.type==0}">
               <div class="item-content-icon"></div>
               <div class="item-content-text">{{item2.name}}</div>
@@ -35,9 +36,10 @@
 <script lang="ts">
 import Vue from 'vue'
 import Component from 'vue-class-component'
-import FileObject from '../typings/FileObject'
+import { FileObject, FileListChangeData } from '../typings/FileObject'
 @Component({
   props: {
+    // 选中的树节点
     selectTreeNode: {
       type: Object,
       default() {
@@ -47,20 +49,27 @@ import FileObject from '../typings/FileObject'
   }
 })
 export default class FileList extends Vue {
+  // 被拖动对象
   dragData: FileObject = {
     name: '',
     fullName: '',
     path: '',
     children: [],
-    type: 0
+    type: 0,
+    select: 0
   }
+  dragParent: any = null
+  // 拖动容器对象
   dragTarget: FileObject = {
     name: '',
     fullName: '',
     path: '',
     children: [],
-    type: 0
+    type: 0,
+    select: 0
   }
+  // 选择对象集合
+  selects: Array<FileObject> = []
 
   created() {
     // console.log(`created:${this.name}`)
@@ -71,66 +80,116 @@ export default class FileList extends Vue {
   }
 
   // 用户开始拖动元素时触发
-  dragstart(event, data: FileObject): void {
+  dragstart(event, data: FileObject, dragParent: FileObject): void {
+    event.stopPropagation()
     this.dragData = data
+    this.dragParent = dragParent
+    const index = this.selects.findIndex(item => item === data)
+    if (index < 0) {
+      this.selects.push(data)
+    }
   }
 
   // 元素正在拖动时触发
-  drag(event) {}
+  drag(event) {
+    event.stopPropagation()
+  }
 
   // 当被鼠标拖动的对象进入其容器范围内时触发此事件
   dragenter(event) {
+    event.stopPropagation()
     console.log('dragenter')
   }
 
   // 当某被拖动的对象在另一对象容器范围内拖动时触发此事件
   dragover(event, data: FileObject): void {
+    event.stopPropagation()
     event.preventDefault()
   }
 
   // 当被鼠标拖动的对象离开其容器范围内时触发此事件
   dragleave(event) {
+    event.stopPropagation()
     console.log('dragleave')
   }
 
   //  在一个拖动过程中，释放鼠标键时触发此事件
-  drop(event, data: FileObject): void {
+  drop(event, targetData: FileObject): void {
+    event.stopPropagation()
     event.preventDefault()
-    if (this.dragData === data) {
+    if (this.dragData === targetData) {
       alert('同一元素')
       return
     }
     // 放下后更新列表数据
-    this.refreshListData(this.dragData, data)
+    const fileListChangeData: FileListChangeData = {
+      selects: this.selects,
+      target: targetData
+    }
+    this.$root.$data.eventHub.$emit('fileListChange', fileListChangeData)
+    this.refreshListData(this.dragData, targetData)
   }
 
   // 用户完成元素拖动后触发
-  dragend(event) {}
+  dragend(event) {
+    event.stopPropagation()
+    this.dragData = {
+      name: '',
+      fullName: '',
+      path: '',
+      children: [],
+      type: 0,
+      select: 0
+    }
+    this.dragParent = null
+    this.dragTarget = {
+      name: '',
+      fullName: '',
+      path: '',
+      children: [],
+      type: 0,
+      select: 0
+    }
+    this.selects = []
+  }
 
-  // 更新拖动后列表数据
+  // 更新拖动后列表数据(TODO:此处逻辑需要放到CatgoryTree中处理,树结构的数据操作在一个地方进行)
   refreshListData(dragData: FileObject, targetData: FileObject) {
+    if (!targetData) {
+      targetData = this.$props.selectTreeNode.data
+    }
     const listData: any = this.$props.selectTreeNode.data
-    const index = listData.children.findIndex(item => item === dragData)
+    const parent: FileObject = this.dragParent || listData
+    const index = parent.children.findIndex(item => item === dragData)
+    const targetIndex = listData.children.findIndex(item => item === targetData)
     if (targetData.children.length > 0) {
-      // 拖动到的对象是文件夹
+      // 容器对象是文件夹
       if (index >= 0) {
         targetData.children.push(dragData)
-        listData.children.splice(index, 1)
+        parent.children.splice(index, 1)
+        if (parent.children.length === 0) {
+          const parentIndex = listData.children.findIndex(
+            item => item === parent
+          )
+          parentIndex > -1 && listData.children.splice(parentIndex, 1)
+        }
       }
     } else {
-      // 拖动到的对象是单文件,创建文件夹，两个单文件放入文件夹
+      // 容器对象是单文件,创建文件夹，两个单文件放入文件夹
       if (index >= 0) {
-        listData.children.splice(index, 1)
         const newFolder: FileObject = {
           name: `${targetData.name}_${dragData.name}`,
           fullName: `${targetData.path}\\${targetData.name}_${dragData.name}`,
           path: targetData.path,
           type: 1,
+          select: 1,
           children: []
         }
         newFolder.children.push(this.dragData)
         newFolder.children.push(targetData)
+        listData.children.splice(index, 1)
         listData.children.splice(index, 0, newFolder)
+        listData.children.splice(targetIndex, 1)
       }
     }
   }

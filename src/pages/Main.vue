@@ -81,6 +81,7 @@ export default class Main extends Vue {
     this.treeData = data
   }
 
+  // 重置
   reset() {
     this.treeData = []
     this.selectTreeNode = null
