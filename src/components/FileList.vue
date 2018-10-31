@@ -138,7 +138,6 @@ export default class FileList extends Vue {
       dragParent: this.dragParent
     }
     this.$root.$data.eventHub.$emit('fileListChange', fileListChangeData)
-    // this.refreshListData(this.dragData, targetData)
   }
 
   // 用户完成元素拖动后触发

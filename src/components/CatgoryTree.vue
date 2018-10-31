@@ -133,8 +133,10 @@ export default class CatgoryTree extends Vue {
 
   // 移动到文件夹(TODO:文件夹移动到文件夹的情况)
   move2Folder(dragObj: FileObject, target: FileObject) {
+    // 从当前位置移除
     const dragNode = this.elTree.getNode(dragObj)
     dragNode.remove()
+    // 添加到目标位置
     const targetNode = this.elTree.getNode(target)
     targetNode.insertChild({ data: dragObj })
   }
@@ -144,12 +146,13 @@ export default class CatgoryTree extends Vue {
     // 从当前位置移除
     const dragNode = this.elTree.getNode(dragObj)
     dragNode.remove()
-    // 添加到外层节点
+    // 添加到目标位置
     this.currentNode.insertChild({ data: dragObj })
   }
 
   // 移动到文件
   move2file(selects: Array<FileObject>, target: FileObject) {
+    // 新建文件夹
     const newFolder: FileObject = {
       name: `新建文件夹`,
       fullName: `${target.path}\\新建文件夹`,
@@ -159,8 +162,8 @@ export default class CatgoryTree extends Vue {
       children: []
     }
     this.elTree.insertBefore(newFolder, target)
-    // this.currentNode.insertChild({ data: newFolder })
     this.$nextTick(() => {
+      // 添加到目标位置
       const newFolderNode = this.elTree.getNode(newFolder)
       newFolderNode.insertChild({ data: target })
       selects.forEach((dragObj: FileObject) => {
