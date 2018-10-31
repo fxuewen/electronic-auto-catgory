@@ -23,7 +23,7 @@
 <script lang="ts">
 import Vue from 'vue'
 import Component from 'vue-class-component'
-import { FileListChangeData } from '../typings/FileObject'
+import { FileListChangeData, FileObject } from '../typings/FileObject'
 
 @Component({
   props: {
@@ -77,6 +77,7 @@ export default class CatgoryTree extends Vue {
   }
   // 树vue实例
   elTree: any = null
+  currentNode: any = null
 
   created() {
     // console.log(`created:${this.$props.treeData}`)
@@ -90,14 +91,14 @@ export default class CatgoryTree extends Vue {
       this.elTree.setCurrentKey(currentKey)
       const currentNodeData = this.elTree.getCurrentNode()
       const currentNode = this.elTree.getNode(currentNodeData)
-      console.log('currentNode')
-      console.log(currentNode)
+      this.currentNode = currentNode
       this.$root.$data.eventHub.$emit('setSelectTreeNode', currentNode)
     })
   }
 
   // 当前节点变化
   currentNodeChange(data, node) {
+    this.currentNode = node
     this.$root.$data.eventHub.$emit('setSelectTreeNode', node)
   }
 
@@ -110,22 +111,68 @@ export default class CatgoryTree extends Vue {
   // 编辑
   edit() {}
 
+  // 文件列表发生变化(进行了拖动,添加,删除等操作)
   fileListChange(data: FileListChangeData) {
     console.log('drag data change')
     console.log(data.selects, data.target)
+    const selects: Array<FileObject> = data.selects
+    const target: FileObject = data.target
+    // 目标对象是文件
+    if (target.type === 0) {
+      this.move2file(selects, target)
+    } else {
+      selects.forEach((dragObj: FileObject) => {
+        if (target === this.currentNode.data) {
+          this.moveOutFolder(dragObj, target)
+        } else {
+          this.move2Folder(dragObj, target)
+        }
+      })
+    }
   }
 
-  // 文件移动到文件夹
-  file2Folder() {}
+  // 移动到文件夹(TODO:文件夹移动到文件夹的情况)
+  move2Folder(dragObj: FileObject, target: FileObject) {
+    const dragNode = this.elTree.getNode(dragObj)
+    dragNode.remove()
+    const targetNode = this.elTree.getNode(target)
+    targetNode.insertChild({ data: dragObj })
+  }
 
-  // 文件移动到文件
-  file2file() {}
+  // 移出文件夹
+  moveOutFolder(dragObj: FileObject, target: FileObject) {
+    // 从当前位置移除
+    const dragNode = this.elTree.getNode(dragObj)
+    dragNode.remove()
+    // 添加到外层节点
+    this.currentNode.insertChild({ data: dragObj })
+  }
 
-  // 文件移动到文件夹外
-  folder2out() {}
+  // 移动到文件
+  move2file(selects: Array<FileObject>, target: FileObject) {
+    const newFolder: FileObject = {
+      name: `新建文件夹`,
+      fullName: `${target.path}\\新建文件夹`,
+      path: target.path,
+      type: 1,
+      select: 1,
+      children: []
+    }
+    this.elTree.insertBefore(newFolder, target)
+    // this.currentNode.insertChild({ data: newFolder })
+    this.$nextTick(() => {
+      const newFolderNode = this.elTree.getNode(newFolder)
+      newFolderNode.insertChild({ data: target })
+      selects.forEach((dragObj: FileObject) => {
+        const dragNode = this.elTree.getNode(dragObj)
+        dragNode.remove()
+        newFolderNode.insertChild({ data: dragObj })
+      })
+    })
+  }
 
   // 文件夹到文件夹(相邻的文件夹是否顺移操作)
-  folder2folder() {}
+  folder2folder(fileObj: FileObject, target: FileObject) {}
 }
 </script>
 

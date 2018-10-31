@@ -79,6 +79,8 @@ export default class Main extends Vue {
   // 更新树形结构数据
   updateTreeData(data: Array<Object>) {
     this.treeData = data
+    console.log('tree')
+    console.log(data)
   }
 
   // 重置

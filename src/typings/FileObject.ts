@@ -10,6 +10,7 @@ interface FileObject {
 interface FileListChangeData {
     selects: Array<FileObject>,
     target: FileObject,
+    dragParent: FileObject
 }
 
 export { FileObject, FileListChangeData }
