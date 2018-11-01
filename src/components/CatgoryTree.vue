@@ -163,9 +163,12 @@ export default class CatgoryTree extends Vue {
     }
     this.elTree.insertBefore(newFolder, target)
     this.$nextTick(() => {
-      // 添加到目标位置
       const newFolderNode = this.elTree.getNode(newFolder)
+      // 将目标文件移动到文件夹
+      const targetNode = this.elTree.getNode(target)
+      targetNode.remove()
       newFolderNode.insertChild({ data: target })
+      // 将拖动对象移动到文件夹
       selects.forEach((dragObj: FileObject) => {
         const dragNode = this.elTree.getNode(dragObj)
         dragNode.remove()

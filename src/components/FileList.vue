@@ -67,7 +67,6 @@ export default class FileList extends Vue {
     type: 0,
     select: 0
   }
-  dragParent: any = null
   // 拖动容器对象
   dragTarget: FileObject = {
     name: '',
@@ -89,10 +88,9 @@ export default class FileList extends Vue {
   }
 
   // 用户开始拖动元素时触发
-  dragstart(event, data: FileObject, dragParent: FileObject): void {
+  dragstart(event, data: FileObject): void {
     event.stopPropagation()
     this.dragData = data
-    this.dragParent = dragParent
     const index = this.selects.findIndex(item => item === data)
     if (index < 0) {
       this.selects.push(data)
@@ -134,8 +132,7 @@ export default class FileList extends Vue {
     // 放下后更新列表数据
     const fileListChangeData: FileListChangeData = {
       selects: this.selects,
-      target: targetData || this.$props.selectTreeNode.data,
-      dragParent: this.dragParent
+      target: targetData || this.$props.selectTreeNode.data
     }
     this.$root.$data.eventHub.$emit('fileListChange', fileListChangeData)
   }
@@ -151,7 +148,6 @@ export default class FileList extends Vue {
       type: 0,
       select: 0
     }
-    this.dragParent = null
     this.dragTarget = {
       name: '',
       fullName: '',
