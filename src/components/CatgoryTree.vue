@@ -35,7 +35,7 @@ import { FileListChangeData, FileObject } from '../typings/FileObject'
     }
   },
   filters: {
-    fileCategory: function(value) {
+    fileCategory(value) {
       const iconMap = {
         image: 'icon-icon-tupianwenjian',
         video: 'icon-icon-shipinwenjian',
@@ -59,9 +59,22 @@ import { FileListChangeData, FileObject } from '../typings/FileObject'
         ppt: ['ppt', 'pptx'],
         zip: ['zip', 'rar', '7z']
       }
+
+      // 获取文件扩展名
+      const getExtension = function(filename): string {
+        var startIndex = filename.lastIndexOf('.')
+        if (startIndex !== -1) {
+          return filename
+            .substring(startIndex + 1, filename.length)
+            .toLowerCase()
+        } else {
+          return ''
+        }
+      }
+      const extension = getExtension(value)
       Object.keys(typeMap).forEach(_type => {
         const extensions = typeMap[_type]
-        if (extensions.indexOf(value) > -1) {
+        if (extensions.indexOf(extension) > -1) {
           type = _type
         }
       })
