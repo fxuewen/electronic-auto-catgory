@@ -73,6 +73,10 @@ export default class FileList extends Vue {
   // 用户开始拖动元素时触发
   dragstart(event, data: FileObject): void {
     event.stopPropagation()
+    // 拖动过程中不允许换目标
+    if (this.draging) {
+      return
+    }
     this.draging = data
     const index = this.selects.findIndex(item => item === data)
     if (index < 0) {
@@ -170,11 +174,12 @@ export default class FileList extends Vue {
     .item-file {
       margin: 16px;
       background-color: #f5f5f5;
+      min-width: 160px;
+      min-height: 200px;
 
       .item-header {
         height: 40px;
         line-height: 40px;
-        min-width: 120px;
 
         &.folder {
           background-color: #485a6c;

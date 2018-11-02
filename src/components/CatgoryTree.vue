@@ -146,6 +146,10 @@ export default class CatgoryTree extends Vue {
 
   // 移动到文件夹(TODO:文件夹移动到文件夹的情况)
   move2Folder(dragObj: FileObject, target: FileObject) {
+    // 不处理文件夹内的拖动
+    if (target.children.findIndex(item => item === dragObj) > -1) {
+      return
+    }
     // 从当前位置移除
     const dragNode = this.elTree.getNode(dragObj)
     dragNode.remove()
