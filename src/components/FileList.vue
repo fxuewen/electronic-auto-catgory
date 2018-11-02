@@ -170,12 +170,11 @@ export default class FileList extends Vue {
     .item-file {
       margin: 16px;
       background-color: #f5f5f5;
-      transition: all linear .3s;
 
       .item-header {
         height: 40px;
         line-height: 40px;
-        min-width: 200px;
+        min-width: 120px;
 
         &.folder {
           background-color: #485a6c;
@@ -191,8 +190,8 @@ export default class FileList extends Vue {
 
         &.lev1-file-content {
           .item-content-icon {
-            min-width: 232px;
-            min-height: 300px;
+            width: 120px;
+            height: 150px;
             border: 1px solid #ddd;
           }
           .item-content-text {
@@ -204,8 +203,8 @@ export default class FileList extends Vue {
           .lev2-folder-content,
           .lev2-file-content {
             .item-content-icon {
-              min-width: 200px;
-              min-height: 300px;
+              width: 120px;
+              height: 150px;
               border: 1px solid #ddd;
             }
 
