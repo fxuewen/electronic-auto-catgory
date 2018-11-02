@@ -165,29 +165,35 @@ export default class CatgoryTree extends Vue {
 
   // 移动到文件
   move2file(selects: Array<FileObject>, target: FileObject) {
-    // 新建文件夹
-    const newFolder: FileObject = {
-      name: `新建文件夹`,
-      fullName: `${target.path}\\新建文件夹`,
-      path: target.path,
-      type: 1,
-      select: 1,
-      children: []
-    }
-    this.elTree.insertBefore(newFolder, target)
-    this.$nextTick(() => {
-      const newFolderNode = this.elTree.getNode(newFolder)
-      // 将目标文件移动到文件夹
-      const targetNode = this.elTree.getNode(target)
-      targetNode.remove()
-      newFolderNode.insertChild({ data: target })
-      // 将拖动对象移动到文件夹
-      selects.forEach((dragObj: FileObject) => {
-        const dragNode = this.elTree.getNode(dragObj)
-        dragNode.remove()
-        newFolderNode.insertChild({ data: dragObj })
-      })
+    // 将拖动对象移动到文件夹
+    selects.forEach((dragObj: FileObject) => {
+      const dragNode = this.elTree.getNode(dragObj)
+      dragNode.remove()
+      this.elTree.insertAfter(dragObj, target)
     })
+    // // 新建文件夹
+    // const newFolder: FileObject = {
+    //   name: `新建文件夹`,
+    //   fullName: `${target.path}\\新建文件夹`,
+    //   path: target.path,
+    //   type: 1,
+    //   select: 1,
+    //   children: []
+    // }
+    // this.elTree.insertBefore(newFolder, target)
+    // this.$nextTick(() => {
+    //   const newFolderNode = this.elTree.getNode(newFolder)
+    //   // 将目标文件移动到文件夹
+    //   const targetNode = this.elTree.getNode(target)
+    //   targetNode.remove()
+    //   newFolderNode.insertChild({ data: target })
+    //   // 将拖动对象移动到文件夹
+    //   selects.forEach((dragObj: FileObject) => {
+    //     const dragNode = this.elTree.getNode(dragObj)
+    //     dragNode.remove()
+    //     newFolderNode.insertChild({ data: dragObj })
+    //   })
+    // })
   }
 
   // 文件夹到文件夹(相邻的文件夹是否顺移操作)

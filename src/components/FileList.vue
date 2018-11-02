@@ -1,8 +1,7 @@
 <template>
     <div class="file-list-container">
-      <div class="file-list-content" ref="fileListContent"
-        @dragenter="dragenter($event)" @drop='drop($event)'  @dragover='dragover($event)' @dragend="dragend($event)">
-        <div v-if="!selectTreeNode.data.children.length" class="item-file">
+      <transition-group tag="div" class="file-list-content" ref="fileListContent">
+        <div v-if="!selectTreeNode.data.children.length" class="item-file" :key="selectTreeNode.data.name">
           <div class="item-header file">图片文件</div>
           <div class="item-content lev1-file-content">
             <div>
@@ -12,7 +11,7 @@
           </div>
         </div>
         <div v-else :class="{'item-folder': item1.type==1, 'item-file': item1.type !=1}" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1"
-          @dragenter="dragenter($event)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)" @drop='drop($event, item1)' @dragend="dragend($event)">
+          @dragenter="dragenter($event, item1)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)" @drop='drop($event, item1)' @dragend="dragend($event)">
           <div :class="['item-header', {'folder': item1.type==1, 'file': item1.type==0}]">{{item1 | getFolderName}}</div>
           <div v-if="item1.type==0" class="item-content lev1-file-content" 
             draggable="true" @dragstart="dragstart($event,item1)">
@@ -29,7 +28,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </transition-group>
     </div>
 </template>
 
@@ -59,23 +58,7 @@ import { FileObject, FileListChangeData } from '../typings/FileObject'
 })
 export default class FileList extends Vue {
   // 被拖动对象
-  dragData: FileObject = {
-    name: '',
-    fullName: '',
-    path: '',
-    children: [],
-    type: 0,
-    select: 0
-  }
-  // 拖动容器对象
-  dragTarget: FileObject = {
-    name: '',
-    fullName: '',
-    path: '',
-    children: [],
-    type: 0,
-    select: 0
-  }
+  draging: any = null
   // 选择对象集合
   selects: Array<FileObject> = []
 
@@ -90,7 +73,7 @@ export default class FileList extends Vue {
   // 用户开始拖动元素时触发
   dragstart(event, data: FileObject): void {
     event.stopPropagation()
-    this.dragData = data
+    this.draging = data
     const index = this.selects.findIndex(item => item === data)
     if (index < 0) {
       this.selects.push(data)
@@ -103,13 +86,25 @@ export default class FileList extends Vue {
   }
 
   // 当被鼠标拖动的对象进入其容器范围内时触发此事件
-  dragenter(event) {
-    event.stopPropagation()
+  dragenter(event, target: FileObject) {
     console.log('dragenter')
+    event.stopPropagation()
+    event.preventDefault()
+    event.dataTransfer.effectAllowed = 'move'
+    if (this.draging === target) {
+      return
+    }
+    // 放下后更新列表数据
+    const fileListChangeData: FileListChangeData = {
+      selects: this.selects,
+      target: target
+    }
+    this.$root.$data.eventHub.$emit('fileListChange', fileListChangeData)
   }
 
   // 当某被拖动的对象在另一对象容器范围内拖动时触发此事件
-  dragover(event, data: FileObject): void {
+  dragover(event, target: FileObject): void {
+    event.dataTransfer.dropEffect = 'move'
     if (this.dragCheck) {
       event.preventDefault()
     }
@@ -122,40 +117,15 @@ export default class FileList extends Vue {
   }
 
   //  在一个拖动过程中，释放鼠标键时触发此事件
-  drop(event, targetData: FileObject): void {
+  drop(event, target: FileObject): void {
     event.stopPropagation()
     event.preventDefault()
-    if (this.dragData === targetData) {
-      alert('同一元素')
-      return
-    }
-    // 放下后更新列表数据
-    const fileListChangeData: FileListChangeData = {
-      selects: this.selects,
-      target: targetData || this.$props.selectTreeNode.data
-    }
-    this.$root.$data.eventHub.$emit('fileListChange', fileListChangeData)
   }
 
   // 用户完成元素拖动后触发
   dragend(event) {
     event.stopPropagation()
-    this.dragData = {
-      name: '',
-      fullName: '',
-      path: '',
-      children: [],
-      type: 0,
-      select: 0
-    }
-    this.dragTarget = {
-      name: '',
-      fullName: '',
-      path: '',
-      children: [],
-      type: 0,
-      select: 0
-    }
+    this.draging = null
     this.selects = []
   }
 
@@ -200,6 +170,7 @@ export default class FileList extends Vue {
     .item-file {
       margin: 16px;
       background-color: #f5f5f5;
+      transition: all linear .3s;
 
       .item-header {
         height: 40px;
