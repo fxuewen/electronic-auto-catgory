@@ -73,15 +73,12 @@ export default class FileList extends Vue {
   // 用户开始拖动元素时触发
   dragstart(event, data: FileObject): void {
     event.stopPropagation()
-    // 拖动过程中不允许换目标
-    if (this.draging) {
-      return
-    }
     this.draging = data
-    const index = this.selects.findIndex(item => item === data)
-    if (index < 0) {
-      this.selects.push(data)
-    }
+    // const index = this.selects.findIndex(item => item === data)
+    this.selects = [data]
+    // if (index < 0) {
+    //   this.selects.push(data)
+    // }
   }
 
   // 元素正在拖动时触发
@@ -94,7 +91,7 @@ export default class FileList extends Vue {
     console.log('dragenter')
     event.stopPropagation()
     event.preventDefault()
-    event.dataTransfer.effectAllowed = 'move'
+    // event.dataTransfer.effectAllowed = 'move'
     if (this.draging === target) {
       return
     }
@@ -108,7 +105,7 @@ export default class FileList extends Vue {
 
   // 当某被拖动的对象在另一对象容器范围内拖动时触发此事件
   dragover(event, target: FileObject): void {
-    event.dataTransfer.dropEffect = 'move'
+    // event.dataTransfer.dropEffect = 'move'
     if (this.dragCheck) {
       event.preventDefault()
     }
