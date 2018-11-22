@@ -1,15 +1,42 @@
 import Vue, { AsyncComponent } from 'vue'
 import Router, { RouteConfig, Route, NavigationGuard } from 'vue-router'
 
-const Main: AsyncComponent = (): any => import('@/pages/Main.vue')
+const Login: AsyncComponent = (): any => import('@/pages/Login.vue')
+const Admin: AsyncComponent = (): any => import('@/pages/Admin.vue')
+const AutoCategory: AsyncComponent = (): any => import('@/pages/AutoCategory.vue')
+const AutoDetection: AsyncComponent = (): any => import('@/pages/AutoDetection.vue')
 
 Vue.use(Router)
 
 const routes: RouteConfig[] = [
   {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
     path: '/',
-    name: 'Main',
-    component: Main
+    name: 'Admin',
+    component: Admin,
+    children: [
+      {
+        path: '/category',
+        name: 'AutoCategory',
+        meta: {
+          keepAlive: true
+        },
+        component: AutoCategory
+      },
+      {
+        path: '/detection',
+        name: 'AutoDetection',
+        meta: {
+          keepAlive: true
+        },
+        component: AutoDetection
+      }
+    ],
+    redirect: '/category'
   }
 ]
 

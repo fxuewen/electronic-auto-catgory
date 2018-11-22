@@ -3,13 +3,24 @@ interface FileObject {
     path: string,
     fullName: string,
     children: Array<Object>,
-    select: 0 | 1,
-    type: 0 | 1
+    type: 0 | 1,
+    id: string,
+    temp?: true | false
+    checked: false | true,
+    draging: false | true,
+    move: false | true,
+    input: {
+        show: false | true,
+        value: string,
+        type: string
+    }
 }
 
 interface FileListChangeData {
     selects: Array<FileObject>,
-    target: FileObject
+    draging: FileObject,
+    target: FileObject,
+    outer: boolean
 }
 
 export { FileObject, FileListChangeData }

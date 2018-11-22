@@ -11,11 +11,11 @@ import Component from 'vue-class-component'
     propMessage: String
   }
 })
-export default class SelectCatgory extends Vue {
+export default class Demo extends Vue {
   msg: string = 'Welcome to Your Vue.js App'
 
   created() {
-    // console.log(`created:${this.name}`)
+    // console.log(`created:${this.msg}`)
   }
 
   // 计算属性
@@ -24,11 +24,7 @@ export default class SelectCatgory extends Vue {
   }
 
   mounted() {
-    // console.log(`mounted:${this.name}`)
-  }
-
-  getMsg(): string {
-    return this.msg
+    // console.log(`mounted:${this.msg}`)
   }
 }
 </script>

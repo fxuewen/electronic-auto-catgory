@@ -1,0 +1,435 @@
+<template>
+  <el-container v-if="treeData.length" class="auto-category-container" 
+    v-loading="loading.show" element-loading-background="rgba(255, 255, 255, 0.8)" :element-loading-text="loading.text">
+    <el-aside  width="360px">
+      <div class="aside-header">
+        <span class="aside-header-title">卷宗目录</span>
+        <span class="aside-header-btns">
+          <el-dropdown>
+            <span class="el-dropdown-link">
+              <i class="iconfont icon-icon-shangchuan"></i>
+              上传
+            </span>
+            <el-dropdown-menu  class="category-dropdown-tree" slot="dropdown">
+              <el-dropdown-item @click.native="uploadDirectoryImg"><span class="iconfont icon-icon-shangchuanmulutupian"></span>上传目录图片</el-dropdown-item>
+              <el-dropdown-item :divided="true" @click.native="uploadDirectoryFloder"><span class="iconfont icon-icon-shangchuanmuluwenjianjia"></span>上传目录文件夹</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+          <span class="aside-header-reset" @click="reset"><i class="iconfont icon-icon-zhongzhi"></i>重置</span>
+        </span>
+      </div>
+      <category-tree :treeData.sync="treeData"></category-tree>
+    </el-aside>
+    <el-main>
+      <div class="main-header">
+        <span class="main-header-title">目录文件1111列表</span>
+        <span class="main-header-btns">
+          <!-- <span class="btn"><i class="iconfont icon-icon-shengchengshuangcengPDF"></i>生成双层PDF</span> -->
+          <span class="btn"><i class="iconfont icon-icon-shengchengjuanzong"></i>生成卷宗</span>
+          <span class="btn"><i class="iconfont icon-icon-juanzongbianmu"></i>生成目录</span>
+        </span>
+      </div>
+      <file-bread-crumb v-if="breadCrumbs.length>0" :breadCrumbs.sync="breadCrumbs"></file-bread-crumb>
+      <file-list v-if="selectTreeNode" :selectTreeNode.sync="selectTreeNode"></file-list>
+    </el-main>
+  </el-container>
+  <select-category v-else></select-category>
+</template>
+
+<script lang="ts">
+import Vue from 'vue'
+import Component from 'vue-class-component'
+import SelectCategory from '@/components/SelectCategory.vue'
+import CategoryTree from '@/components/CategoryTree.vue'
+import FileList from '@/components/FileList.vue'
+import Utils from '../utils/utils'
+import FileBreadCrumb from '@/components/FileBreadCrumb.vue'
+@Component({
+  components: { SelectCategory, CategoryTree, FileList, FileBreadCrumb }
+})
+export default class AutoCategory extends Vue {
+  addDirectories: Array<Object> = []
+  addFiles: Array<Object> = []
+  addMenuFiles: Array<Object> = []
+  treeData: any = []
+  breadCrumbs: Array<Object> = []
+  selectTreeNode: any = null
+  // 加载状态
+  loading: any = {
+    show: false,
+    text: '加载中'
+  }
+
+  created() {}
+
+  mounted() {
+    this.$nextTick(function() {
+      this.$root.$data.eventHub.$on('index', (data: any) => {
+        this.uploadDirectoryImgCallback(data.catogoryInfo)
+        this.uploadDirectoryFolderCallback(data.catogoryFiles)
+        this.getFilesCallback(data.getFiles)
+        this.updateTreeData(data.addDirectories)
+      })
+      this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
+        this.breadCrumbs = []
+        this.breadCrumbs.push({
+          id: node.data.id,
+          level: node.level,
+          label: node.label
+        })
+        this.pushBreadCrumbs(node)
+        this.selectTreeNode = node
+      })
+      this.$root.$data.eventHub.$on('updateNowCrumb', (data: any) => {
+        console.log(data)
+      })
+    })
+  }
+  pushBreadCrumbs(node) {
+    if (node.level > 1) {
+      this.breadCrumbs.push({
+        id: node.parent.data.id,
+        level: node.parent.level,
+        label: node.parent.label
+      })
+      this.breadCrumbs.sort(this.compare)
+      this.pushBreadCrumbs(node.parent)
+    }
+  }
+  compare(obj1, obj2) {
+    let val1 = obj1.level
+    let val2 = obj2.level
+    if (val1 < val2) {
+      return -1
+    } else if (val1 > val2) {
+      return 1
+    } else {
+      return 0
+    }
+  }
+  destroyed() {
+    this.$root.$data.eventHub.$off('index')
+    this.$root.$data.eventHub.$off('setSelectTreeNode')
+  }
+
+  // 上传目录图片
+  uploadDirectoryImg() {
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'uploadDirectoryImg',
+      active: true
+    })
+    try {
+      window.IndexActions.uploadDirectoryImg(this.treeData[0].fullName)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  // 上传目录图片回调
+  uploadDirectoryImgCallback(catogoryInfo) {
+    if (!catogoryInfo || !this.treeData.length) {
+      return
+    }
+
+    const status: number = catogoryInfo.status
+    switch (status) {
+      case 202:
+        // 数据使用后将当前模块取消激活
+        this.$store.dispatch('setModuleActionStatus', {
+          moduleName: 'index',
+          action: 'uploadDirectoryImg',
+          active: true
+        })
+        this.loading.show = true
+        this.loading.text = '目录图片识别中'
+        break
+      case 500:
+        this.$message({
+          message: catogoryInfo.message || '目录图片解析失败',
+          type: 'warning'
+        })
+        this.loading.show = false
+        this.loading.text = ''
+        break
+      case 200:
+        const isActionActive = this.$store.getters.isModuleActionActive(
+          'index',
+          'uploadDirectoryImg'
+        )
+        if (!isActionActive) {
+          return
+        }
+        // 数据使用后将当前模块取消激活
+        this.$store.dispatch('setModuleActionStatus', {
+          moduleName: 'index',
+          action: 'uploadDirectoryImg',
+          active: false
+        })
+        this.loading.show = false
+        this.loading.text = ''
+        if (catogoryInfo.data.path.indexOf(this.treeData[0].fullName) > -1) {
+          this.$root.$data.eventHub.$emit(
+            'uploadDirectoryImgSuccess',
+            catogoryInfo.data
+          )
+        } else {
+          this.$alert('请在当前卷宗目录中选择目录图片', '提示', {
+            type: 'warning'
+          })
+        }
+        break
+      default:
+    }
+  }
+
+  // 上传目录文件夹
+  uploadDirectoryFloder() {
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'uploadDirectoryFloder',
+      active: true
+    })
+    try {
+      window.IndexActions.uploadDirectoryFloder(this.treeData[0].fullName)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  // 上传目录文件夹回调
+  uploadDirectoryFolderCallback(catogoryFiles) {
+    const isActionActive = this.$store.getters.isModuleActionActive(
+      'index',
+      'uploadDirectoryFloder'
+    )
+    if (!isActionActive) {
+      return
+    }
+
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'uploadDirectoryFloder',
+      active: false
+    })
+
+    if (!catogoryFiles || catogoryFiles.length === 0) {
+      return
+    }
+
+    const data = catogoryFiles[0]
+    if (data.fullName.indexOf(this.treeData[0].fullName) > -1) {
+      this.$root.$data.eventHub.$emit(
+        'uploadDirectoryFolderSuccess',
+        catogoryFiles
+      )
+    } else {
+      this.$alert('请在当前卷宗目录中选择文件夹', '提示', {
+        type: 'warning'
+      })
+    }
+  }
+
+  // 上传文件回调
+  getFilesCallback(files) {
+    const isActionActive = this.$store.getters.isModuleActionActive(
+      'index',
+      'uploadFiles'
+    )
+    if (!isActionActive) {
+      return
+    }
+
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'uploadFiles',
+      active: false
+    })
+    this.$root.$data.eventHub.$emit('uploadFiles', files)
+  }
+
+  // 更新树形结构数据
+  updateTreeData(data: Array<Object>) {
+    const isActionActive = this.$store.getters.isModuleActionActive(
+      'index',
+      'getDirectoryInfo'
+    )
+    if (!isActionActive) {
+      return
+    }
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'getDirectoryInfo',
+      active: false
+    })
+    data.forEach(item => {
+      this.dataFormat(item)
+    })
+    this.treeData = data
+  }
+
+  // 对数据进行格式化,使数据满足使用需求
+  dataFormat(data) {
+    data.checked = false
+    data.draging = false
+    data.move = false
+    data.input = {
+      show: false,
+      value: '',
+      type: 'edit'
+    }
+    if (!data.id) {
+      data.id = Utils.getUuid(32)
+    }
+    data.children.forEach(child => {
+      return this.dataFormat(child)
+    })
+  }
+
+  // 重置
+  reset() {
+    this.$confirm('此操作将清空卷宗目录结构, 是否继续?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      closeOnClickModal: false,
+      type: 'warning'
+    })
+      .then(() => {
+        this.treeData = []
+        this.selectTreeNode = null
+        this.breadCrumbs = []
+      })
+      .catch(() => {
+        this.$message('已取消')
+      })
+  }
+}
+</script>
+
+<style lang="scss">
+$defaultBlue: #42a0f8;
+$hoverBlue: #5fb1fe;
+$clickBlue: #2e96f7;
+
+.auto-category-container {
+  // background-color: #f0f4f7;
+
+  .el-aside {
+    background-color: #fff;
+    // margin-top: 24px;
+    // margin-left: 24px;
+    // margin-right: 16px;
+    border-right: 1px solid #f0f4f7;
+    width: 200px;
+
+    .aside-header {
+      height: 55px;
+      line-height: 55px;
+      background-color: #fff;
+      border-bottom: 1px solid #ddd;
+
+      .aside-header-title {
+        margin-left: 16px;
+        padding-left: 8px;
+        position: relative;
+
+        &::before {
+          content: '';
+          display: inline-block;
+          height: 12px;
+          width: 3px;
+          margin-right: 8px;
+          background-color: $defaultBlue;
+        }
+      }
+
+      .aside-header-btns {
+        float: right;
+        position: relative;
+        color: $defaultBlue;
+
+        .el-dropdown-link {
+          cursor: pointer;
+          color: $defaultBlue;
+          margin-right: 16px;
+        }
+
+        .aside-header-reset {
+          margin-right: 12px;
+          cursor: pointer;
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  .el-main {
+    background-color: #fff;
+    // margin-top: 24px;
+    // margin-right: 24px;
+    padding: 0;
+    position: relative;
+
+    .main-header {
+      height: 55px;
+      line-height: 55px;
+      background-color: #fff;
+      border-bottom: 1px solid #ddd;
+
+      .main-header-title {
+        margin-left: 16px;
+        padding-left: 8px;
+
+        &::before {
+          content: '';
+          display: inline-block;
+          height: 12px;
+          width: 3px;
+          margin-right: 8px;
+          background-color: $defaultBlue;
+        }
+      }
+
+      .main-header-btns {
+        float: right;
+        position: relative;
+
+        .btn {
+          display: inline-block;
+          height: 100%;
+          padding: 0 12px;
+          border-left: 1px solid #ddd;
+          color: $defaultBlue;
+          cursor: pointer;
+
+          &:hover {
+            color: $hoverBlue;
+          }
+        }
+      }
+    }
+  }
+}
+
+.category-dropdown-tree {
+  li {
+    line-height: 30px;
+  }
+
+  &.el-popper[x-placement^='bottom'] {
+    margin-top: 2px;
+
+    .popper__arrow {
+      display: none;
+    }
+  }
+}
+</style>
+
+
