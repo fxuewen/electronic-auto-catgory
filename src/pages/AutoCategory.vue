@@ -3,7 +3,7 @@
     v-loading="loading.show" element-loading-background="rgba(255, 255, 255, 0.8)" :element-loading-text="loading.text">
     <el-aside  width="360px">
       <div class="aside-header">
-        <span class="aside-header-title">卷宗目录</span>
+        <span class="aside-header-title"><span class="aside-header-title-name">卷宗目录</span></span>
         <span class="aside-header-btns">
           <el-dropdown>
             <span class="el-dropdown-link">
@@ -22,14 +22,13 @@
     </el-aside>
     <el-main>
       <div class="main-header">
-        <span class="main-header-title">目录文件1111列表</span>
+        <span class="main-header-title"><file-bread-crumb v-if="breadCrumbs.length>0" :breadCrumbs.sync="breadCrumbs"></file-bread-crumb></span>
         <span class="main-header-btns">
           <!-- <span class="btn"><i class="iconfont icon-icon-shengchengshuangcengPDF"></i>生成双层PDF</span> -->
-          <span class="btn"><i class="iconfont icon-icon-shengchengjuanzong"></i>生成卷宗</span>
-          <span class="btn"><i class="iconfont icon-icon-juanzongbianmu"></i>生成目录</span>
+          <span class="btn" @click="createDossier"><i class="iconfont icon-icon-shengchengjuanzong"></i>生成卷宗</span>
+          <span class="btn" @click="createCategory"><i class="iconfont icon-icon-juanzongbianmu"></i>生成目录</span>
         </span>
       </div>
-      <file-bread-crumb v-if="breadCrumbs.length>0" :breadCrumbs.sync="breadCrumbs"></file-bread-crumb>
       <file-list v-if="selectTreeNode" :selectTreeNode.sync="selectTreeNode"></file-list>
     </el-main>
   </el-container>
@@ -72,13 +71,20 @@ export default class AutoCategory extends Vue {
       })
       this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
         this.breadCrumbs = []
-        this.breadCrumbs.push({
-          id: node.data.id,
-          level: node.level,
-          label: node.label
-        })
+        let selectNode = node
+        // 面包屑只显示到文件夹
+        if (node.data.type === 1) {
+          this.breadCrumbs.push({
+            id: node.data.id,
+            level: node.level,
+            label: node.label
+          })
+        } else {
+          selectNode = node.parent
+        }
+
         this.pushBreadCrumbs(node)
-        this.selectTreeNode = node
+        this.selectTreeNode = selectNode
       })
       this.$root.$data.eventHub.$on('updateNowCrumb', (data: any) => {
         console.log(data)
@@ -129,6 +135,14 @@ export default class AutoCategory extends Vue {
 
   // 上传目录图片回调
   uploadDirectoryImgCallback(catogoryInfo) {
+    const isActionActive = this.$store.getters.isModuleActionActive(
+      'index',
+      'uploadDirectoryImg'
+    )
+    if (!isActionActive) {
+      return
+    }
+
     if (!catogoryInfo || !this.treeData.length) {
       return
     }
@@ -136,16 +150,16 @@ export default class AutoCategory extends Vue {
     const status: number = catogoryInfo.status
     switch (status) {
       case 202:
-        // 数据使用后将当前模块取消激活
-        this.$store.dispatch('setModuleActionStatus', {
-          moduleName: 'index',
-          action: 'uploadDirectoryImg',
-          active: true
-        })
         this.loading.show = true
         this.loading.text = '目录图片识别中'
         break
       case 500:
+        // 数据使用后将当前模块取消激活
+        this.$store.dispatch('setModuleActionStatus', {
+          moduleName: 'index',
+          action: 'uploadDirectoryImg',
+          active: false
+        })
         this.$message({
           message: catogoryInfo.message || '目录图片解析失败',
           type: 'warning'
@@ -154,13 +168,6 @@ export default class AutoCategory extends Vue {
         this.loading.text = ''
         break
       case 200:
-        const isActionActive = this.$store.getters.isModuleActionActive(
-          'index',
-          'uploadDirectoryImg'
-        )
-        if (!isActionActive) {
-          return
-        }
         // 数据使用后将当前模块取消激活
         this.$store.dispatch('setModuleActionStatus', {
           moduleName: 'index',
@@ -236,7 +243,7 @@ export default class AutoCategory extends Vue {
   getFilesCallback(files) {
     const isActionActive = this.$store.getters.isModuleActionActive(
       'index',
-      'uploadFiles'
+      'getFiles'
     )
     if (!isActionActive) {
       return
@@ -245,10 +252,21 @@ export default class AutoCategory extends Vue {
     // 数据使用后将当前模块取消激活
     this.$store.dispatch('setModuleActionStatus', {
       moduleName: 'index',
-      action: 'uploadFiles',
+      action: 'getFiles',
       active: false
     })
-    this.$root.$data.eventHub.$emit('uploadFiles', files)
+
+    if (files.length === 0) {
+      return
+    }
+
+    if (files[0].path.indexOf(this.treeData[0].fullName) > -1) {
+      this.$root.$data.eventHub.$emit('uploadFiles', files)
+    } else {
+      this.$alert('请在当前卷宗目录中选择文件', '提示', {
+        type: 'warning'
+      })
+    }
   }
 
   // 更新树形结构数据
@@ -266,28 +284,19 @@ export default class AutoCategory extends Vue {
       action: 'getDirectoryInfo',
       active: false
     })
+
+    const treeData: any = data[0]
+    if (!treeData || treeData.children.length === 0) {
+      this.$alert('案件文件夹不能为空', '提示', {
+        type: 'warning'
+      })
+      return
+    }
+
     data.forEach(item => {
-      this.dataFormat(item)
+      Utils.categoryTreeDataFormat(item)
     })
     this.treeData = data
-  }
-
-  // 对数据进行格式化,使数据满足使用需求
-  dataFormat(data) {
-    data.checked = false
-    data.draging = false
-    data.move = false
-    data.input = {
-      show: false,
-      value: '',
-      type: 'edit'
-    }
-    if (!data.id) {
-      data.id = Utils.getUuid(32)
-    }
-    data.children.forEach(child => {
-      return this.dataFormat(child)
-    })
   }
 
   // 重置
@@ -307,6 +316,28 @@ export default class AutoCategory extends Vue {
         this.$message('已取消')
       })
   }
+
+  // 生成卷宗
+  createDossier() {
+    const dataStr = JSON.stringify(this.treeData)
+
+    try {
+      window.IndexActions.createCatalogues(dataStr)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  // 生成目录
+  createCategory() {
+    const dataStr = JSON.stringify(this.treeData)
+
+    try {
+      window.IndexActions.createCataloguesMenu(dataStr)
+    } catch (error) {
+      console.log(error)
+    }
+  }
 }
 </script>
 
@@ -316,13 +347,8 @@ $hoverBlue: #5fb1fe;
 $clickBlue: #2e96f7;
 
 .auto-category-container {
-  // background-color: #f0f4f7;
-
   .el-aside {
     background-color: #fff;
-    // margin-top: 24px;
-    // margin-left: 24px;
-    // margin-right: 16px;
     border-right: 1px solid #f0f4f7;
     width: 200px;
 
@@ -337,10 +363,15 @@ $clickBlue: #2e96f7;
         padding-left: 8px;
         position: relative;
 
+        .aside-header-title-name {
+          vertical-align: middle;
+        }
+
         &::before {
+          vertical-align: middle;
           content: '';
           display: inline-block;
-          height: 12px;
+          height: 18px;
           width: 3px;
           margin-right: 8px;
           background-color: $defaultBlue;
@@ -356,6 +387,8 @@ $clickBlue: #2e96f7;
           cursor: pointer;
           color: $defaultBlue;
           margin-right: 16px;
+          height: 100%;
+          display: inline-block;
         }
 
         .aside-header-reset {
@@ -371,8 +404,6 @@ $clickBlue: #2e96f7;
 
   .el-main {
     background-color: #fff;
-    // margin-top: 24px;
-    // margin-right: 24px;
     padding: 0;
     position: relative;
 
@@ -385,11 +416,13 @@ $clickBlue: #2e96f7;
       .main-header-title {
         margin-left: 16px;
         padding-left: 8px;
+        position: relative;
 
         &::before {
+          vertical-align: middle;
           content: '';
           display: inline-block;
-          height: 12px;
+          height: 18px;
           width: 3px;
           margin-right: 8px;
           background-color: $defaultBlue;
@@ -423,7 +456,7 @@ $clickBlue: #2e96f7;
   }
 
   &.el-popper[x-placement^='bottom'] {
-    margin-top: 2px;
+    margin-top: 0px;
 
     .popper__arrow {
       display: none;

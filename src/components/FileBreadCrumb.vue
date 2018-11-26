@@ -43,8 +43,7 @@ export default class Demo extends Vue {
 
 <style lang="scss">
 .auto-category-bread-crumb {
-  margin-top: 20px;
-  margin-left: 23px;
+  display: inline-block;
 
   .el-breadcrumb__inner.is-link {
     font-weight: 500;

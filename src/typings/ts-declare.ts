@@ -9,6 +9,8 @@ declare global {
       getDirectoryInfo: Function,
       uploadDirectoryFloder: Function
       uploadDirectoryImg: Function
+      createCatalogues: Function
+      createCataloguesMenu: Function
     }
     LoginActions: {
       login: Function

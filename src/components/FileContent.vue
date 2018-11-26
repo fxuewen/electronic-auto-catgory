@@ -8,13 +8,13 @@
                 <use xlink:href="#icon-icon-wenjianjia"></use>
               </svg>
               <div class="item-content-bot" v-show="currentItemOverId === file.id" @click.stop>
-                <span title="预览" @click="dblclickToPreview(file)">
-                  <svg class="icon" aria-hidden="true" style="margin-right:23px;margin-top:6px;" >
+                <span title="预览" @click="dblclickToPreview(file)" v-if="file.type === 0">
+                  <svg class="icon" aria-hidden="true">
                     <use xlink:href="#icon-icon-yulan"></use>
                   </svg>
                 </span>
                 <span title="删除" @click="deleteItem(file)">
-                  <svg class="icon" aria-hidden="true" style="margin-left:23px;margin-top:6px;" >
+                  <svg class="icon" aria-hidden="true">
                     <use xlink:href="#icon-icon-shanchu"></use>
                   </svg>
                 </span>   
@@ -130,7 +130,7 @@ $clickBlue: #2e96f7;
       // box-sizing: border-box;
     }
     .item-content-bot {
-      display: block;
+      display: flex;
       background-color: #404040 !important;
       width: calc(100% + 2px);
       height: 32px;
@@ -139,30 +139,34 @@ $clickBlue: #2e96f7;
       bottom: 0;
       left: -1px;
       text-align: center;
-      // vertical-align: middle;
-      svg {
-        cursor: pointer;
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        &.icon {
-          use {
-            stroke-width: 1;
-            fill: white;
+      span {
+        text-align: center;
+        align-items: stretch;
+        svg {
+          cursor: pointer;
+          display: inline-block;
+          // width: 20px;
+          height: 22px;
+          margin-top: 5px;
+          &.icon {
+            use {
+              stroke-width: 1;
+              fill: white;
+            }
           }
-        }
 
-        &:hover {
-          use {
-            stroke-width: 1;
-            fill: $hoverBlue;
+          &:hover {
+            use {
+              stroke-width: 1;
+              fill: $hoverBlue;
+            }
           }
-        }
 
-        &:active {
-          use {
-            stroke-width: 1;
-            fill: $clickBlue;
+          &:active {
+            use {
+              stroke-width: 1;
+              fill: $clickBlue;
+            }
           }
         }
       }

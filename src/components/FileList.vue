@@ -5,13 +5,20 @@
       <span class="btn delete" @click="deleteFiles"><i class="iconfont icon-icon-shanchu"></i>删除</span>
       <el-checkbox v-if="false" class="select" v-model="checkAll" @change="selectAll">全选</el-checkbox>
     </div>
-    <el-scrollbar class="file-list-container-scrollbar">
+    <div v-if="selectTreeNode.data.type === 1 && selectTreeNode.data.children.length === 0" class="no-result">
+      <img src="../assets/no_result.png">
+      <p>该文件夹为空</p>
+    </div>
+    <el-scrollbar v-else class="file-list-container-scrollbar">
       <transition-group tag="div" class="file-list-content" ref="fileListContent"
         @dragend="dragend($event)">
         <div v-if="!selectTreeNode.data.children.length" class="item" :key="selectTreeNode.data.name">
           <div class="container">
             <div :class="['item-header', {'folder': selectTreeNode.data.type==1, 'file': selectTreeNode.data.type==0}]">
               <span class="file-title" :title="selectTreeNode.data | getFolderName">{{selectTreeNode.data | getFolderName}}</span>
+              <span class="file-check" v-if="selectTreeNode.data.type==1">
+                <input type="checkbox" v-model="selectTreeNode.data.checked"  @change="fileCheck(selectTreeNode.data)">
+              </span>
             </div>
             <file-content
               v-if="!selectTreeNode.data.type || (selectTreeNode.data.type && selectTreeNode.data.children.length)"
@@ -26,7 +33,7 @@
               <span class="file-title"
                 v-bind:style="{'max-width': (item1.children.length || 1) * 110 + 'px' }"
                 :title="item1 | getFolderName">{{item1 | getFolderName}}</span>
-              <span class="file-check" v-if="item1.children.length" >
+              <span class="file-check" v-if="item1.type === 1">
                 <input type="checkbox" v-model="item1.checked"  @change="fileCheck(item1)">
               </span>
             </div>
@@ -90,9 +97,7 @@ export default class FileList extends Vue {
   // 当前预览的图片文件信息
   imgObj: any = {}
   created() {
-    // console.log(`created:${this.name}`)
     this.$root.$data.eventHub.$on('dblclickToPreviewEvent', data => {
-      // console.log(data)
       this.cancelPreviewFlag = false
       data.fileType = data.name
         .substring(data.name.indexOf('.') + 1, data.name.length + 1)
@@ -102,6 +107,20 @@ export default class FileList extends Vue {
 
     this.$root.$data.eventHub.$on('closeImgPreview', () => {
       this.cancelPreviewFlag = true
+    })
+
+    this.$root.$data.eventHub.$on('closeImgPreview', () => {
+      this.cancelPreviewFlag = true
+    })
+
+    this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
+      // 选中节点发生变化时需要还原数据状态
+      this.resetData()
+      // 如果当前选中对象是文件，则将文件选中
+      if (node.data.type === 0) {
+        let parent
+        this.fileCheck(node.data, parent)
+      }
     })
   }
 
@@ -308,6 +327,16 @@ export default class FileList extends Vue {
     })
     return flag
   }
+
+  // 重置数据
+  resetData() {
+    this.checkAll = false
+    this.draging = null
+    this.selects = []
+    this.dragError = false
+    this.cancelPreviewFlag = true
+    this.imgObj = {}
+  }
 }
 </script>
 
@@ -319,6 +348,11 @@ $clickBlue: #2e96f7;
 .file-list-container {
   position: relative;
   width: 100%;
+
+  .no-result {
+    text-align: center;
+    margin-top: 200px;
+  }
 
   .tool-btns {
     padding: 24px 24px 16px 24px;

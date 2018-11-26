@@ -12,8 +12,8 @@
                   <use v-else v-bind:xlink:href="data.name | fileCategory"></use>
                 </svg>
               </span>
-              <span class="custom-tree-node-name" :title="node.label">
-                <span v-if="!data.input.show">{{ node.label }}</span>
+              <span class="custom-tree-node-name">
+                <span v-if="!data.input.show" :title="node.label" :style="{ 'max-width': 240 - (node.level - 1) * 30 + 'px' }">{{ node.label }}</span>
                 <input ref="nodeInput" v-else v-model="data.input.value" @click.stop @blur="nodeInputComplete(node, data)" autofocus/>
               </span>
             </span>
@@ -164,6 +164,17 @@ export default class CatgoryTree extends Vue {
     this.$root.$data.eventHub.$off('uploadFiles')
   }
 
+  // 获取当前所在文件夹
+  getCurrentFolder() {
+    const currentNodeData = this.elTree.getCurrentNode()
+    if (currentNodeData.type === 1) {
+      return currentNodeData
+    } else {
+      const currentNode = this.elTree.getNode(currentNodeData)
+      return currentNode.parent.data
+    }
+  }
+
   // 树节点拖动是否允许放置
   allowDrop(draggingNode, dropNode, type) {
     if (dropNode.data.type === 0 && type === 'inner') {
@@ -175,7 +186,6 @@ export default class CatgoryTree extends Vue {
   // 当前节点变化
   currentNodeChange(data, node) {
     this.$root.$data.eventHub.$emit('setSelectTreeNode', node)
-    console.log(this.getNodeInLevelByName('证据材料卷', 2, { node: null }))
   }
 
   // 上传卷宗目录图片文件成功
@@ -198,10 +208,11 @@ export default class CatgoryTree extends Vue {
         } else {
           // 文件夹存在
           if (index === levels.length - 1) {
+            const currentFolder = this.getCurrentFolder()
             result.node.remove()
             Utils.categoryTreeDataFormat(data)
             result.parentNode.insertChild({ data: data }, result.nodeIndex)
-            const currentNodeId = this.elTree.getCurrentNode().id
+            const currentNodeId = currentFolder.id
             if (result.node.data.id === currentNodeId) {
               this.setCurrentKeySelected(data.id)
             }
@@ -257,47 +268,25 @@ export default class CatgoryTree extends Vue {
     if (!files || files.length === 0) {
       return
     }
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     const currentNode = this.elTree.getNode(currentNodeData)
     if (currentNode) {
       files.forEach(file => {
         // 文件数据格式化
         Utils.categoryTreeDataFormat(file)
-        if (currentNodeData.type) {
-          // 检查上传文件名称是否已存在
-          const result: any = this.getNodeInLevelByName(
-            file.name,
-            currentNode.level + 1,
-            {
-              node: null
-            }
-          )
-          if (!result.node) {
-            currentNode.insertChild({ data: file })
-          } else {
-            this.$message({
-              message: '当前目录下已存在同名文件',
-              type: 'warning'
-            })
+        // 检查上传文件名称是否已存在
+        const fileIndex = currentNodeData.children.findIndex(
+          (child: FileObject) => {
+            return child.name === file.name
           }
+        )
+        if (fileIndex < 0) {
+          currentNode.insertChild({ data: file })
         } else {
-          const result: any = this.getNodeInLevelByName(
-            file.name,
-            currentNode.level,
-            {
-              node: null
-            }
-          )
-          // 当前选中节点是文件则上传到上层文件夹
-          const parentNode = currentNode.parent
-          if (!result.node) {
-            parentNode.insertChild({ data: file })
-          } else {
-            this.$message({
-              message: '当前目录下已存在同名文件',
-              type: 'warning'
-            })
-          }
+          this.$message({
+            message: `当前目录下已存在同名文件:${file.name}`,
+            type: 'warning'
+          })
         }
       })
     }
@@ -332,17 +321,30 @@ export default class CatgoryTree extends Vue {
 
   // 批量删除
   deleteFiles(files: Array<FileObject>) {
-    this.$confirm('此操作将删除所有选中对象，是否继续?', '提示', {
+    let message: string = '此操作将删除所有选中对象，是否继续？'
+    if (files.length === 1 && files[0].type === 0) {
+      message = '是否删除此图片？'
+    }
+    this.$confirm(message, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       closeOnClickModal: false,
       type: 'warning'
     })
       .then(() => {
-        files.forEach(file => {
+        const currentNodeData = this.elTree.getCurrentNode()
+        files.forEach((file, index) => {
+          let newCurrentNode
+          if (file.id === currentNodeData.id) {
+            newCurrentNode = this.elTree.getNode(currentNodeData).parent
+          }
           const fileNode = this.elTree.getNode(file)
           fileNode && fileNode.remove()
+          // 如果当前高亮节点被删除则将它的父节点设为高亮
+          newCurrentNode && this.setCurrentKeySelected(newCurrentNode.data.id)
         })
+        files.splice(0, files.length)
+        this.$root.$emit('deleteFilesSuccess', files)
         this.$message({
           type: 'success',
           message: '删除成功!'
@@ -393,7 +395,13 @@ export default class CatgoryTree extends Vue {
       type: 'warning'
     })
       .then(() => {
+        const currentNodeData: FileObject = this.elTree.getCurrentNode()
+        const parentNode = this.elTree.getNode(currentNodeData).parent
         node.remove()
+        // 删除节点为当前高亮节点，则把父节点高亮
+        if (data.id === currentNodeData.id) {
+          this.setCurrentKeySelected(parentNode.data.id)
+        }
         this.$message({
           type: 'success',
           message: '删除成功!'
@@ -417,7 +425,9 @@ export default class CatgoryTree extends Vue {
   }
 
   // 文件夹名称校验
-  nameValidate(name: string) {
+  nameValidate(node, data) {
+    const input = data.input
+    const name = input.value
     // eslint-disable-next-line
     const regex = new RegExp('[\\\\/:*?"<>|]')
     if (name === '') {
@@ -425,10 +435,10 @@ export default class CatgoryTree extends Vue {
         result: false,
         message: '文件夹名称不能为空'
       }
-    } else if (name.length > 50) {
+    } else if (name.length > 100) {
       return {
         result: false,
-        message: '文件夹名称不能超过50个字符'
+        message: '文件夹名称不能超过100个字符'
       }
     } else if (regex.test(name)) {
       return {
@@ -436,6 +446,19 @@ export default class CatgoryTree extends Vue {
         message: '文件夹名称不能包含/:*?"<>|这些非法字符'
       }
     } else {
+      if (node.level > 1) {
+        const parentNode = node.parent
+        const parentData = parentNode.data
+        const index = parentData.children.findIndex((child: FileObject) => {
+          return child.name === name && child.id !== data.id
+        })
+        if (index > -1) {
+          return {
+            result: false,
+            message: `此目标已包含名为"${name}"的文件夹`
+          }
+        }
+      }
       return {
         result: true,
         message: ''
@@ -449,9 +472,14 @@ export default class CatgoryTree extends Vue {
     data.input.show = false
     const input = data.input
     // 名称校验
-    const validate = this.nameValidate(input.value)
+    const validate = this.nameValidate(node, data)
     if (validate.result) {
       data.name = input.value
+      const currentNodeData: FileObject = this.elTree.getCurrentNode()
+      // 如果编辑的节点为当前高亮节点，则重置高亮
+      if (data.id === currentNodeData.id) {
+        this.setCurrentKeySelected(data.id)
+      }
     } else {
       this.$message({
         type: 'warning',
@@ -596,7 +624,7 @@ export default class CatgoryTree extends Vue {
       const node2 = this.elTree.getNode(id2)
       const file1 = node1.data
       const file2 = node2.data
-      const currentNodeData = this.elTree.getCurrentNode()
+      const currentNodeData = this.getCurrentFolder()
       const node1ParentData = node1.parent.data
       const node2ParentData = node1.parent.data
       let index1: number = 0
@@ -648,7 +676,7 @@ export default class CatgoryTree extends Vue {
     outer: boolean,
     draging: FileObject
   ) {
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     const targetIndex = currentNodeData.children.findIndex(
       item => item === target
     )
@@ -719,7 +747,7 @@ export default class CatgoryTree extends Vue {
     target: FileObject,
     draging: FileObject
   ) {
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     const targetIndex = currentNodeData.children.findIndex(
       item => item === target
     )
@@ -806,7 +834,7 @@ export default class CatgoryTree extends Vue {
   isInOneFolder(files: Array<FileObject>): boolean {
     const node = this.elTree.getNode(files[0].id)
     let parent: FileObject = node.parent.data
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     let isInOneFolder: boolean = true
 
     // 文件直属于当前选中文件夹
@@ -830,7 +858,7 @@ export default class CatgoryTree extends Vue {
     let isInContinuousFolder = true
     const node = this.elTree.getNode(files[0].id)
     let parent: FileObject = node.parent.data
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     // 选中对象所在文件夹索引
     const parentIndex = currentNodeData.children.findIndex(
       child => child === parent
@@ -852,7 +880,7 @@ export default class CatgoryTree extends Vue {
   isSepratedByFile(selects: Array<FileObject>, target: FileObject): boolean {
     // 分别获取第一个文件夹，第一个文件夹之后的文件，最后一个文件夹的索引，根据索引来判断第一个文件夹和最后一个文件夹之间是否有文件
     let isSepratedByFile: boolean = false
-    const currentNodeData: FileObject = this.elTree.getCurrentNode()
+    const currentNodeData: FileObject = this.getCurrentFolder()
     let startFolderIndex: number = -1
     let endFolderIndex: number = -1
     let fileIndex: number = -1
@@ -885,7 +913,7 @@ export default class CatgoryTree extends Vue {
     // 获取选择文件所在文件夹与目标文件夹的前后关系
     const node = this.elTree.getNode(files[0].id)
     let parent: FileObject = node.parent.data
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     // 选中对象所在文件夹索引
     const parentIndex = currentNodeData.children.findIndex(
       child => child === parent
@@ -942,7 +970,7 @@ export default class CatgoryTree extends Vue {
 
   // 顺移
   shiftMove(files: Array<FileObject>, target: FileObject) {
-    const currentNodeData = this.elTree.getCurrentNode()
+    const currentNodeData = this.getCurrentFolder()
     const children = currentNodeData.children
     const newChildren: Array<FileObject> = []
     // 获取选择文件所在文件夹与目标文件夹的前后关系
@@ -1126,7 +1154,7 @@ export default class CatgoryTree extends Vue {
 <style lang="scss">
 .category-tree-container {
   // padding: 16px 4px;
-  padding:0;
+  padding: 0;
 
   .el-scrollbar {
     height: calc(100vh - 146px);
@@ -1151,7 +1179,15 @@ export default class CatgoryTree extends Vue {
 
     .custom-tree-node-name {
       position: relative;
-      display: inline-block;
+
+      span {
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
 
       input {
         border: none;

@@ -28,7 +28,7 @@
             <span cfx-ui-command="minimize" class="btn">
               <i class="iconfont icon-zuixiaohua" title="最小化"></i>
             </span>
-            <span cfx-ui-command="close" class="btn">
+            <span ref="closeBtn" :cfx-ui-command="close" class="btn" @click="closeClient">
               <i class="iconfont icon-guanbi" title="关闭"></i>
             </span> 
           </span>
@@ -56,6 +56,8 @@ export default class Admin extends Vue {
 
   userInfo: Object = {}
 
+  close: string = 'keep'
+
   created() {}
 
   mounted() {
@@ -80,6 +82,30 @@ export default class Admin extends Vue {
   // 关闭设置对话框
   closeSettingDialog() {
     this.settingDialog = false
+  }
+
+  // 关闭客户端
+  closeClient(): void {
+    if (this.close === 'close') {
+      this.close = 'keep'
+      return
+    }
+    this.$confirm('是否退出', '提示', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      closeOnClickModal: false,
+      type: 'warning'
+    })
+      .then(() => {
+        this.close = 'close'
+        const closeBtn: any = this.$refs.closeBtn
+        this.$nextTick(() => {
+          closeBtn.click()
+        })
+      })
+      .catch(() => {
+        this.close = 'keep'
+      })
   }
 
   // 退出登录
