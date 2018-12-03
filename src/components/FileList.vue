@@ -5,13 +5,16 @@
       <span class="btn delete" @click="deleteFiles"><i class="iconfont icon-icon-shanchu"></i>删除</span>
       <el-checkbox v-if="false" class="select" v-model="checkAll" @change="selectAll">全选</el-checkbox>
     </div>
-    <div v-if="selectTreeNode.data.type === 1 && selectTreeNode.data.children.length === 0" class="no-result">
+
+     <div v-if="selectTreeNode.data.type === 1 && selectTreeNode.data.children.length === 0" class="no-result">
       <img src="../assets/no_result.png">
       <p>该文件夹为空</p>
     </div>
-    <el-scrollbar v-else class="file-list-container-scrollbar">
+
+    <el-scrollbar v-else 
+    :class="['file-list-container-scrollbar', {'boardOpend': !cancelPreviewFlag}]">
       <transition-group tag="div" class="file-list-content" ref="fileListContent"
-        @dragend="dragend($event)">
+        @drop="dragend($event)" @dragend="dragend($event)">
         <div v-if="!selectTreeNode.data.children.length" class="item" :key="selectTreeNode.data.name">
           <div class="container">
             <div :class="['item-header', {'folder': selectTreeNode.data.type==1, 'file': selectTreeNode.data.type==0}]">
@@ -26,22 +29,25 @@
             </file-content>
           </div> 
         </div>
-        <div v-else class="item" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1" @dragenter='dragenter($event, item1, true)'>
+        
+        <div v-else :class="['item',{'singleView':item1.children.length === 0,'titleView':item1.children.length >0 && item1.children.length <= 50,'listView':item1.children.length > 50}]" v-for="(item1, index1) in selectTreeNode.data.children" v-bind:key = "index1"
+          @dragenter="dragenter($event, item1, true)" @drop="dragend($event)" @dragend="dragend($event)">
+          <!-- <pre>{{item1}}</pre> -->
           <div :class="['container', {'folder': item1.type==1, 'file': item1.type==0}]"
-            @dragenter="dragenter($event, item1)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)"  @dragend.native="dragend($event)">
+            @dragenter="dragenter($event, item1)" @dragover='dragover($event, item1)' @dragleave="dragleave($event)" @drop="dragend($event)"  @dragend="dragend($event)">
             <div :class="['item-header', {'folder': item1.type==1, 'file': item1.type==0}]">
               <span class="file-title"
                 v-bind:style="{'max-width': (item1.children.length || 1) * 110 + 'px' }"
                 :title="item1 | getFolderName">{{item1 | getFolderName}}</span>
-              <span class="file-check" v-if="item1.type === 1">
+              <span class="file-check"  v-if="item1.type === 1">
                 <input type="checkbox" v-model="item1.checked"  @change="fileCheck(item1)">
               </span>
             </div>
             <file-content v-if="item1.type==0" :file="item1"
-              @click.native="fileCheck(item1)" draggable="true" @dragstart.native="dragstart($event,item1)" @dragend.native="dragend($event)">
+              @click.native="fileCheck(item1)" draggable="true" @dragstart.native="dragstart($event,item1)" @drop.native="dragend($event)">
             </file-content>
             <file-content v-else v-for="(item2, index2) in item1.children" v-bind:key="index2"  :file="item2"
-              @click.native="fileCheck(item2, item1)" :draggable="item2.type==0" @dragstart.native="dragstart($event, item2, item1)" @dragend.native="dragend($event)">
+              @click.native="fileCheck(item2, item1)" :draggable="item2.type==0" @dragstart.native="dragstart($event, item2, item1)" @drop.native="dragend($event)">
             </file-content>
           </div>
         </div>
@@ -49,8 +55,8 @@
     </el-scrollbar>
 
     <div class="imgPreview" :class="[cancelPreviewFlag?'cancelPreview':'']">
-                   <preview-img :imgObj="imgObj"></preview-img>
-                </div>
+      <preview-img :imgObj="imgObj"></preview-img>
+    </div>
 
   </div>
 </template>
@@ -97,16 +103,12 @@ export default class FileList extends Vue {
   // 当前预览的图片文件信息
   imgObj: any = {}
   created() {
+    // console.log(`created:${this.name}`)
     this.$root.$data.eventHub.$on('dblclickToPreviewEvent', data => {
+      // console.log(data)
       this.cancelPreviewFlag = false
-      data.fileType = data.name
-        .substring(data.name.indexOf('.') + 1, data.name.length + 1)
-        .toLowerCase()
+      data.fileType = data.name.substring(data.name.indexOf('.') + 1, data.name.length + 1).toLowerCase()
       this.imgObj = data
-    })
-
-    this.$root.$data.eventHub.$on('closeImgPreview', () => {
-      this.cancelPreviewFlag = true
     })
 
     this.$root.$data.eventHub.$on('closeImgPreview', () => {
@@ -118,8 +120,8 @@ export default class FileList extends Vue {
       this.resetData()
       // 如果当前选中对象是文件，则将文件选中
       if (node.data.type === 0) {
-        let parent
-        this.fileCheck(node.data, parent)
+        node.data.checked = true
+        this.selects.push(node.data)
       }
     })
   }
@@ -271,21 +273,7 @@ export default class FileList extends Vue {
   }
 
   //  在一个拖动过程中，释放鼠标键时触发此事件
-  drop(event, target: FileObject): void {
-    event.stopPropagation()
-    event.preventDefault()
-    if (this.dragError) {
-      // 拖动异常终止时不进行任何文件处理
-      this.dragError = false
-      return
-    }
-    this.$root.$data.eventHub.$emit('fileDragend', target)
-    this.draging = null
-    this.selects.forEach(item => {
-      item.checked = false
-    })
-    this.selects = []
-  }
+  drop(event, target: FileObject): void {}
 
   // 用户完成元素拖动后触发
   dragend(event) {
@@ -293,6 +281,10 @@ export default class FileList extends Vue {
     if (this.dragError) {
       // 拖动异常终止时不进行任何文件处理
       this.dragError = false
+      return
+    }
+    // 如果拖动已经被释放，则终止
+    if (this.selects.length === 0 && !this.draging) {
       return
     }
     this.$root.$data.eventHub.$emit('fileDragend')
@@ -330,12 +322,17 @@ export default class FileList extends Vue {
 
   // 重置数据
   resetData() {
+    // 所有选中状态还原
+    this.selects.forEach((select: FileObject) => {
+      select.checked = false
+    })
     this.checkAll = false
     this.draging = null
     this.selects = []
     this.dragError = false
-    this.cancelPreviewFlag = true
-    this.imgObj = {}
+    // 切换的时候预览不关闭
+    // this.cancelPreviewFlag = true
+    // this.imgObj = {}
   }
 }
 </script>
@@ -393,7 +390,11 @@ $clickBlue: #2e96f7;
   }
 
   .file-list-container-scrollbar {
-    height: calc(100vh - 204px);
+    height: calc(100vh - 180px);
+    &.boardOpend {
+      width: 60%;
+      transition: width 0.5s;
+    }
   }
 
   .el-scrollbar__wrap {
@@ -406,16 +407,16 @@ $clickBlue: #2e96f7;
     flex-wrap: wrap;
     padding: 24px;
     padding-top: 8px;
-
+    // 默认平铺视图
     .item {
       margin-bottom: 16px;
       padding-right: 16px;
+      position: relative;
 
       .container {
         background-color: #f5f5f5;
         min-width: 138px;
         min-height: 225px;
-
         .item-header {
           height: 32px;
           line-height: 32px;
@@ -467,23 +468,114 @@ $clickBlue: #2e96f7;
           }
         }
       }
+      // 平铺视图
+      &.titleView {
+        .container {
+          padding-bottom: 10px;
+          .item-content {
+            padding-bottom: 20px;
+          }
+        }
+      }
+      // 列表视图
+      &.listView {
+        padding-top: 32px;
+        .container {
+          display: flex;
+          flex-wrap: wrap;
+          // justify-content: space-around;
+          background-color: #f5f5f5;
+          // 增加小图标列表视图，之前有大图标平铺视图
+          max-height: 415px;
+          overflow: auto;
+
+          .item-header {
+            &.folder {
+              position: absolute;
+              top: 0;
+              left: 0;
+              z-index: 1;
+              box-sizing: border-box;
+              width: calc(100% - 16px);
+            }
+          }
+
+          .item-content {
+            margin-right: 0px;
+            width: 15%;
+            padding: 4px 5px;
+            .folder {
+              .item-content-icon {
+                > svg {
+                  display: none;
+                }
+              }
+            }
+            .file,
+            .folder {
+              width: 100%;
+              // display: flex;
+              .item-content-icon {
+                cursor: pointer;
+                // display: none;
+                // display: inline-block;
+                width: auto;
+                height: auto;
+                .item-content-bot {
+                  display: none;
+                }
+                img {
+                  display: none;
+                }
+                .item-content-text {
+                  max-width: 100%;
+                  span {
+                    &.file-text {
+                      width: calc(100% - 20px);
+                      text-overflow: ellipsis;
+                      overflow: hidden;
+                      text-align: left;
+                    }
+                  }
+                }
+              }
+
+              .item-content-text {
+                display: flex;
+                line-height: 24px;
+                span {
+                  &.file-icon {
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    svg {
+                      display: inline-block;
+                      width: 20px;
+                      height: 20px;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 
   // 预览面板样式
   .imgPreview {
     position: absolute;
-    top: -32px;
-    left: 60%;
-    float: right;
-    height: calc(100% + 32px);
+    z-index: 2;
+    top: 0;
+    right: 0;
+    height: 100%;
     background-color: #f4f6f8;
     width: calc(40% - 1px);
     border-left: 1px solid #e8e8e8;
     transition: left 0.5s;
     &.cancelPreview {
       left: 100%;
-      // right: - calc(40% - 1px);
     }
   }
 }

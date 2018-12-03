@@ -113,14 +113,8 @@ export default class CatgoryTree extends Vue {
       })
       this.$root.$data.eventHub.$on('fileDragend', this.onFileDragend)
       this.$root.$data.eventHub.$on('deleteFiles', this.deleteFiles)
-      this.$root.$data.eventHub.$on(
-        'uploadDirectoryImgSuccess',
-        this.uploadDirectoryImgSuccess
-      )
-      this.$root.$data.eventHub.$on(
-        'uploadDirectoryFolderSuccess',
-        this.uploadDirectoryFolderSuccess
-      )
+      this.$root.$data.eventHub.$on('uploadDirectoryImgSuccess', this.uploadDirectoryImgSuccess)
+      this.$root.$data.eventHub.$on('uploadDirectoryFolderSuccess', this.uploadDirectoryFolderSuccess)
       this.$root.$data.eventHub.$on('uploadFiles', this.uploadFiles)
     })
   }
@@ -177,6 +171,9 @@ export default class CatgoryTree extends Vue {
 
   // 树节点拖动是否允许放置
   allowDrop(draggingNode, dropNode, type) {
+    if (dropNode.level === 1 && type === 'prev') {
+      return false
+    }
     if (dropNode.data.type === 0 && type === 'inner') {
       return false
     }
@@ -275,16 +272,14 @@ export default class CatgoryTree extends Vue {
         // 文件数据格式化
         Utils.categoryTreeDataFormat(file)
         // 检查上传文件名称是否已存在
-        const fileIndex = currentNodeData.children.findIndex(
-          (child: FileObject) => {
-            return child.name === file.name
-          }
-        )
+        const fileIndex = currentNodeData.children.findIndex((child: FileObject) => {
+          return child.name === file.name
+        })
         if (fileIndex < 0) {
           currentNode.insertChild({ data: file })
         } else {
           this.$message({
-            message: `当前目录下已存在同名文件:${file.name}`,
+            message: `当前目录下已存在同名文件"${file.name}"`,
             type: 'warning'
           })
         }
@@ -638,24 +633,16 @@ export default class CatgoryTree extends Vue {
           index2 = parentData.children.findIndex(child => child === file2)
         } else {
           // 在不同文件夹
-          index1 = currentNodeData.children.findIndex(
-            child => child === node1ParentData
-          )
-          index2 = currentNodeData.children.findIndex(
-            child => child === node2ParentData
-          )
+          index1 = currentNodeData.children.findIndex(child => child === node1ParentData)
+          index2 = currentNodeData.children.findIndex(child => child === node2ParentData)
         }
       } else if (node1.level < node2.level) {
         // node1在上层文件夹
         index1 = currentNodeData.children.findIndex(child => child === file1)
-        index2 = currentNodeData.children.findIndex(
-          child => child === node2ParentData
-        )
+        index2 = currentNodeData.children.findIndex(child => child === node2ParentData)
       } else {
         // node2在上层文件夹
-        index1 = currentNodeData.children.findIndex(
-          child => child === node1ParentData
-        )
+        index1 = currentNodeData.children.findIndex(child => child === node1ParentData)
         index2 = currentNodeData.children.findIndex(child => child === file2)
       }
 
@@ -670,25 +657,14 @@ export default class CatgoryTree extends Vue {
   }
 
   // 移动到文件夹(TODO:文件夹移动到文件夹的情况)
-  move2Folder(
-    selects: Array<FileObject>,
-    target: FileObject,
-    outer: boolean,
-    draging: FileObject
-  ) {
+  move2Folder(selects: Array<FileObject>, target: FileObject, outer: boolean, draging: FileObject) {
     const currentNodeData = this.getCurrentFolder()
-    const targetIndex = currentNodeData.children.findIndex(
-      item => item === target
-    )
+    const targetIndex = currentNodeData.children.findIndex(item => item === target)
     const dragId = draging.id.split('_temp')[0]
     const dragNode = this.elTree.getNode(dragId)
-    let dragIndex = currentNodeData.children.findIndex(
-      item => item.id === dragId
-    )
+    let dragIndex = currentNodeData.children.findIndex(item => item.id === dragId)
     if (dragIndex < 0) {
-      dragIndex = currentNodeData.children.findIndex(
-        item => item === dragNode.parent.data
-      )
+      dragIndex = currentNodeData.children.findIndex(item => item === dragNode.parent.data)
     }
     // 排序
     if (!outer) {
@@ -706,9 +682,7 @@ export default class CatgoryTree extends Vue {
     // 移动
     selects.forEach((dragObj: FileObject) => {
       const realId = dragObj.id.split('_temp')[0]
-      const indexInTarget = target.children.findIndex(
-        (item: FileObject) => item.id === realId
-      )
+      const indexInTarget = target.children.findIndex((item: FileObject) => item.id === realId)
       if (!outer && indexInTarget > -1) {
         // 没有进行移动操作则删除临时节点
         const dragNode = this.elTree.getNode(dragObj)
@@ -716,7 +690,7 @@ export default class CatgoryTree extends Vue {
         return
       }
       const fileNameExist = this.isFileNameExist(dragObj, target)
-      if (fileNameExist) {
+      if (!outer && fileNameExist) {
         this.dragResult = false
       }
       // 如果是原始文件，则创建临时拖动对象
@@ -742,19 +716,11 @@ export default class CatgoryTree extends Vue {
   }
 
   // 移动到文件
-  move2file(
-    selects: Array<FileObject>,
-    target: FileObject,
-    draging: FileObject
-  ) {
+  move2file(selects: Array<FileObject>, target: FileObject, draging: FileObject) {
     const currentNodeData = this.getCurrentFolder()
-    const targetIndex = currentNodeData.children.findIndex(
-      item => item === target
-    )
+    const targetIndex = currentNodeData.children.findIndex(item => item === target)
     const dragId = draging.id.split('_temp')[0]
-    const dragIndex = currentNodeData.children.findIndex(
-      item => item.id === dragId
-    )
+    const dragIndex = currentNodeData.children.findIndex(item => item.id === dragId)
     // 拖动元素排序
     if (dragIndex > targetIndex) {
       // 放在拖动元素之前，此时需要降序排序
@@ -775,9 +741,7 @@ export default class CatgoryTree extends Vue {
       const realId = dragObj.id.split('_temp')[0]
       // 回到初始位置时
       if (realId === target.id) {
-        const realIndex = this.selects.findIndex(
-          (item: FileObject) => item.id === realId
-        )
+        const realIndex = this.selects.findIndex((item: FileObject) => item.id === realId)
         const file = this.selects[realIndex]
         file.move = false
         file.draging = true
@@ -808,10 +772,7 @@ export default class CatgoryTree extends Vue {
     console.log('in same folder')
 
     // 3.拖动文件所在文件夹必须和目标文件夹相邻
-    const isInContinuousFolder: boolean = this.isInContinuousFolder(
-      selects,
-      target
-    )
+    const isInContinuousFolder: boolean = this.isInContinuousFolder(selects, target)
     if (!isInContinuousFolder) {
       return
     }
@@ -824,10 +785,29 @@ export default class CatgoryTree extends Vue {
       return
     }
 
+    // 5.目标文件夹是否是最后一个文件夹，如果移动到最后一个文件夹也不产生瞬移
+    const isLastFolder: boolean = this.isLastFolder(target)
+    if (isLastFolder) {
+      return
+    }
+
     console.log('begin move file shift')
 
     // 满足条件后开始顺移
     this.beforeShiftMove(selects, target)
+  }
+
+  // 是否是当前所在文件夹中的最后一个文件夹
+  isLastFolder(target: FileObject): boolean {
+    const currentNodeData = this.getCurrentFolder()
+    const children = currentNodeData.children
+    const folders: Array<FileObject> = []
+    children.forEach((child: FileObject) => {
+      if (child.type === 1) {
+        folders.push(child)
+      }
+    })
+    return target === folders[folders.length - 1]
   }
 
   // 文件是否在同一文件夹
@@ -860,13 +840,9 @@ export default class CatgoryTree extends Vue {
     let parent: FileObject = node.parent.data
     const currentNodeData = this.getCurrentFolder()
     // 选中对象所在文件夹索引
-    const parentIndex = currentNodeData.children.findIndex(
-      child => child === parent
-    )
+    const parentIndex = currentNodeData.children.findIndex(child => child === parent)
     // 目标文件夹索引
-    const targetIndex = currentNodeData.children.findIndex(
-      child => child === target
-    )
+    const targetIndex = currentNodeData.children.findIndex(child => child === target)
     if (parentIndex < 0 || targetIndex < 0) {
       isInContinuousFolder = false
     }
@@ -915,21 +891,16 @@ export default class CatgoryTree extends Vue {
     let parent: FileObject = node.parent.data
     const currentNodeData = this.getCurrentFolder()
     // 选中对象所在文件夹索引
-    const parentIndex = currentNodeData.children.findIndex(
-      child => child === parent
-    )
+    const parentIndex = currentNodeData.children.findIndex(child => child === parent)
     // 目标文件夹索引
-    const targetIndex = currentNodeData.children.findIndex(
-      child => child === target
-    )
+    const targetIndex = currentNodeData.children.findIndex(child => child === target)
 
     let isFileShiftMove = true
     const children: Array<any> = parent.children
     if (parentIndex < targetIndex) {
       // 选择文件夹在目标文件夹前则需要是选择文件夹中的最后面几个连续文件
       files.forEach((file: FileObject, index: number) => {
-        const fileInFolder: FileObject =
-          children[children.length - files.length + index]
+        const fileInFolder: FileObject = children[children.length - files.length + index]
         if (fileInFolder !== file) {
           isFileShiftMove = false
         }
@@ -970,27 +941,27 @@ export default class CatgoryTree extends Vue {
 
   // 顺移
   shiftMove(files: Array<FileObject>, target: FileObject) {
-    const currentNodeData = this.getCurrentFolder()
-    const children = currentNodeData.children
-    const newChildren: Array<FileObject> = []
-    // 获取选择文件所在文件夹与目标文件夹的前后关系
-    const node = this.elTree.getNode(files[0].id)
-    let parent: FileObject = node.parent.data
-    // 选中对象所在文件夹索引
-    const dragIndex = children.findIndex(child => child === parent)
-    // 目标文件夹索引
-    const targetIndex = children.findIndex(child => child === target)
-    const shift = dragIndex - targetIndex
-    if (shift === 0) {
-      this.clearDragData()
-      return
-    }
-
     // 还原选中文件的拖动状态
     files.forEach((file: FileObject) => {
       file.move = false
       file.draging = false
     })
+    const currentNodeData = this.getCurrentFolder()
+    const originChildren = currentNodeData.children
+    const children = JSON.parse(JSON.stringify(originChildren))
+    const newChildren: Array<FileObject> = []
+    // 获取选择文件所在文件夹与目标文件夹的前后关系
+    const node = this.elTree.getNode(files[0].id)
+    let parent: FileObject = node.parent.data
+    // 选中对象所在文件夹索引
+    const dragIndex = children.findIndex((child: FileObject) => child.id === parent.id)
+    // 目标文件夹索引
+    const targetIndex = children.findIndex((child: FileObject) => child.id === target.id)
+    const shift = dragIndex - targetIndex
+    if (shift === 0) {
+      this.clearDragData()
+      return
+    }
 
     // 变化的所有文件
     const resetFiles: Array<FileObject> = []
@@ -1009,9 +980,7 @@ export default class CatgoryTree extends Vue {
 
         if (temp.type === 1) {
           if (i === dragIndex) {
-            fileNumArr.push(
-              this.getRealFileLength(temp.children) - files.length
-            )
+            fileNumArr.push(this.getRealFileLength(temp.children) - files.length)
           } else {
             fileNumArr.push(this.getRealFileLength(temp.children))
           }
@@ -1038,9 +1007,7 @@ export default class CatgoryTree extends Vue {
 
         if (temp.type === 1) {
           if (i === targetIndex) {
-            fileNumArr.push(
-              this.getRealFileLength(temp.children) + files.length
-            )
+            fileNumArr.push(this.getRealFileLength(temp.children) + files.length)
           } else {
             fileNumArr.push(this.getRealFileLength(temp.children))
           }
@@ -1059,11 +1026,12 @@ export default class CatgoryTree extends Vue {
 
     // 从children移除独立文件，后面通过重排列表再分配
     fileArr.forEach((file: FileObject) => {
-      const index = children.findIndex(item => item === file)
+      const index = children.findIndex((item: FileObject) => item.id === file.id)
       index > -1 && children.splice(index, 1)
     })
 
     // 文件重新分配
+    const sameFile: any = {}
     const startIndex = dragIndex < targetIndex ? dragIndex : targetIndex
     for (let i = 0; i < children.length; i++) {
       if (i < startIndex) {
@@ -1082,6 +1050,10 @@ export default class CatgoryTree extends Vue {
           }
         }
         newChildren.push(folder)
+        if (!sameFile.file) {
+          sameFile.file = this.getSameFileInFolder(folder.children)
+          sameFile.folderName = folder.name
+        }
       }
     }
     // 如果文件夹重排完后还有多余文件，则放到外层中去
@@ -1089,8 +1061,21 @@ export default class CatgoryTree extends Vue {
       newChildren.push(file)
     })
 
-    const childrenStr = JSON.stringify(newChildren)
-    this.$set(currentNodeData, 'children', JSON.parse(childrenStr))
+    if (!sameFile.file) {
+      sameFile.file = this.getSameFileInFolder(resetFiles)
+      sameFile.folderName = currentNodeData.name
+    }
+
+    // 没有同名文件，则顺移正常
+    if (!sameFile.file) {
+      const childrenStr = JSON.stringify(newChildren)
+      this.$set(currentNodeData, 'children', JSON.parse(childrenStr))
+    } else {
+      const type = sameFile.type === 1 ? '文件夹' : '文件'
+      this.$alert(`文件夹'${sameFile.folderName}'中存在${type}'${sameFile.file.name}',已回退顺移操作`, '提示', {
+        type: 'warning'
+      })
+    }
 
     // 清空拖动临时数据
     this.clearDragData()
@@ -1107,6 +1092,26 @@ export default class CatgoryTree extends Vue {
       num++
     }
     return num
+  }
+
+  // 获取文件夹内重名的文件
+  getSameFileInFolder(children) {
+    if (children.length <= 1) {
+      return null
+    }
+
+    const nameMap = {}
+    const firstFile = children[0]
+    nameMap[firstFile.name] = firstFile
+    for (let i = 1; i < children.length; i++) {
+      const file = children[i]
+      if (!nameMap[file.name]) {
+        nameMap[file.name] = file
+      } else {
+        return file
+      }
+    }
+    return null
   }
 
   // 文件夹中是否存在同名文件
@@ -1133,12 +1138,13 @@ export default class CatgoryTree extends Vue {
   clearDragData() {
     // 还原拖动节点状态
     this.selects.forEach((select: FileObject) => {
-      select.move = false
-      select.draging = false
+      const node = this.elTree.getNode(select.id)
+      node.data.move = false
+      node.data.draging = false
     })
     // 清空临时节点
     this.tempFiles.forEach((tempFile: FileObject) => {
-      const tempNode = this.elTree.getNode(tempFile)
+      const tempNode = this.elTree.getNode(tempFile.id)
       tempNode && tempNode.remove()
     })
 

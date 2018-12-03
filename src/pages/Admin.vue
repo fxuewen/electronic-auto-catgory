@@ -110,6 +110,8 @@ export default class Admin extends Vue {
 
   // 退出登录
   loginOut() {
+    // 退出登录前清空数据
+    this.$root.$data.eventHub.$emit('page2login', true)
     try {
       window.Admin.loginout()
     } catch (error) {}
@@ -160,10 +162,7 @@ $clickBlue: #2e96f7;
           position: absolute;
           width: 100%;
           height: 100%;
-          background: linear-gradient(
-            rgba(66, 160, 248, 0),
-            rgba(0, 72, 218, 1)
-          );
+          background: linear-gradient(rgba(66, 160, 248, 0), rgba(0, 72, 218, 1));
           top: -1px;
           left: 0;
           bottom: 0;

@@ -5,6 +5,7 @@
 </template>
 
 <script lang="ts">
+// B003 2018/11/27 20:12 预发布
 // 引入图标库
 import './sass/icons/iconfont.css'
 import './sass/icons/iconfont.js'

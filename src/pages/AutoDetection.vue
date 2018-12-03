@@ -146,7 +146,6 @@ export default class AutoDetection extends Vue {
   noNormalList: Array<any> = []
   loading: any = false
   uploadLoading: any = false
-  checkFlag: any = false // 检测清晰度flag
   defaultValue: any = '' // 默认的阀值
   imgObj: any = {}
   thresholdEnum: any = {
@@ -156,9 +155,7 @@ export default class AutoDetection extends Vue {
     data: []
   }
   thresholdEnumList: Array<Object> = []
-  data() {
-    return {}
-  }
+
   created() {
     if (this.timeOut) {
       clearTimeout(this.timeOut)
@@ -168,7 +165,21 @@ export default class AutoDetection extends Vue {
     }
     this.firstFlag = true
     // 获取阀值列表
-    window.AutoDetectionActions.getThresholdEnum()
+    try {
+      window.AutoDetectionActions.getThresholdEnum()
+    } catch (error) {
+      console.log(error)
+    }
+    // 解绑事件
+    this.offEvent()
+    // 绑定事件
+    this.bindEvent()
+  }
+
+  mounted() {}
+
+  // 绑定事件
+  bindEvent() {
     this.$root.$data.eventHub.$on('closeImgPreview', () => {
       this.cancelPreviewFlag = true
       this.$nextTick(() => {
@@ -179,123 +190,203 @@ export default class AutoDetection extends Vue {
         }
       })
     })
+
     this.$root.$data.eventHub.$on('autoDetection', data => {
-      if (data.isRelogin) {
-        this.firstFlag = true
-        this.activeItem = 1
-        this.cancelPreviewFlag = true
+      const detectFileInfo = data.detectFileInfo
+      this.onThresholds(data.thresholds)
+
+      // 选择文件
+      this.onFileSelect(detectFileInfo)
+
+      if (this.loading) {
+        // 图片检测
+        this.onDetection(detectFileInfo)
       }
-      if (
-        data.upLoadDirectoryPath !== '' &&
-        data.upLoadDirectoryPath !== null
-      ) {
-        this.uploadLoading = true
-      } else {
-        this.uploadLoading = false
-      }
-      this.loading = false
-      if (data.detectFileInfo.isBackWorking === false) {
-        if (data.detectFileInfo.isSuccess) {
-          if (data.detectFileInfo.Msg !== '') {
-            if (data.detectFileInfo.Msg === '不能上传空文件夹') {
-              this.$message({
-                message: data.detectFileInfo.Msg,
-                type: 'warning',
-                duration: 3000
-              })
-            } else {
-              this.changeTab(1)
-              this.$message({
-                message: data.detectFileInfo.Msg,
-                type: 'success',
-                duration: 3000
-              })
-            }
-          }
+    })
+
+    this.$root.$data.eventHub.$on('page2login', this.clearData)
+  }
+
+  // 解绑事件
+  offEvent() {
+    this.$root.$data.eventHub.$off('autoDetection')
+  }
+
+  // 获取阈值回调
+  onThresholds(thresholds) {
+    if (thresholds.status === 'OK' && this.thresholdEnumList.length === 0) {
+      this.thresholdEnumList = thresholds.data
+      this.thresholdEnumList.forEach((item: any) => {
+        if (item.cn === '推荐') {
+          item.displayValue = item.en + '(推荐)'
+          this.value8 = item.en
+          this.defaultValue = item.en
         } else {
-          if (
-            data.detectFileInfo.Msg !== '' &&
-            data.detectFileInfo.Msg !== null
-          ) {
-            this.$message({
-              message: data.detectFileInfo.Msg,
-              type: 'error',
-              duration: 3000
-            })
-          }
+          item.displayValue = item.en
         }
-      }
-      if (data.thresholds.status === 'OK') {
-        if (this.firstFlag) {
-          this.thresholdEnumList = data.thresholds.data
-          this.thresholdEnumList.forEach((item: any) => {
-            if (item.cn === '推荐') {
-              item.displayValue = item.en + '(推荐)'
-              this.value8 = item.en
-              this.defaultValue = item.en
-            } else {
-              item.displayValue = item.en
-            }
-          })
-          this.firstFlag = false
+      })
+      this.firstFlag = false
+    }
+  }
+
+  // 选择文件夹
+  getDirectories() {
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'autoDetection',
+      action: 'upLoadDirectory',
+      active: true
+    })
+    try {
+      window.AutoDetectionActions.upLoadDirectory()
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  // 选择文件夹回调
+  onFileSelect(detectFileInfo) {
+    // 未执行任何操作
+    if (!detectFileInfo.Msg) {
+      return
+    }
+
+    this.changeTab(1)
+    // 正在上传图片
+    if (detectFileInfo.upLoadDirectoryPath) {
+      this.uploadLoading = true
+      return
+    }
+
+    const isActionActive = this.$store.getters.isModuleActionActive('autoDetection', 'upLoadDirectory')
+    if (!isActionActive) {
+      return
+    }
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'autoDetection',
+      action: 'upLoadDirectory',
+      active: false
+    })
+    // 图片上传状态
+    this.uploadLoading = false
+
+    // 图片上传完成
+    this.allImgList = detectFileInfo.directoryInfos
+    if (detectFileInfo.directoryInfos.length) {
+      this.allImgList.forEach(item => {
+        item.fileType = item.name.substring(item.name.indexOf('.') + 1, item.name.length + 1).toLowerCase()
+      })
+      this.$nextTick(() => {
+        if (this.activeItem === 1) {
+          this.noNormalList = []
+          this.getImgDistance()
+        } else {
+          this.getImgDistanceNo()
         }
-      }
-      if (data.detectFileInfo.directoryInfos) {
-        this.allImgList = data.detectFileInfo.directoryInfos
-      }
-      if (this.allImgList.length > 0) {
-        console.log(this.allImgList)
-        this.allImgList.forEach(item => {
-          item.fileType = item.name
-            .substring(item.name.indexOf('.') + 1, item.name.length + 1)
-            .toLowerCase()
-        })
-        this.$nextTick(() => {
-          if (this.activeItem === 1) {
-            this.noNormalList = []
-            this.getImgDistance()
-          } else {
-            this.getImgDistanceNo()
-          }
-        })
-      } else {
-        this.noNormalList = []
-      }
-      if (this.checkFlag) {
-        this.changeTab(2)
-        this.$message({
-          message: '清晰度检测完成',
-          type: 'success',
-          duration: 3000
-        })
-        this.checkFlag = false
-      }
+      })
+      this.$message({
+        message: detectFileInfo.Msg,
+        type: 'success',
+        duration: 3000
+      })
+    } else {
+      this.noNormalList = []
+      this.$message({
+        message: detectFileInfo.Msg,
+        type: 'warning',
+        duration: 3000
+      })
+    }
+
+    // 选择图片后需要重置图片检测的状态
+    this.loading = false
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'autoDetection',
+      action: 'detectAction',
+      active: false
     })
   }
 
-  mounted() {}
-  // getDefinition(e) {
-  //   e = e || window.event
-  //   let charcode = typeof e.charCode === 'number' ? e.charCode : e.keyCode
-  //   let re = /\d/
-  //   if (!re.test(String.fromCharCode(charcode)) && charcode > 9 && !e.ctrlKey) {
-  //     if (e.preventDefault) {
-  //       e.preventDefault()
-  //     } else {
-  //       e.returnValue = false
-  //     }
-  //   } else {
-  //     let num = this.getSwitchCode(charcode)
-  //     if (Number(e.target._value + '' + num) > 2147483647) {
-  //       this.value8 = e.target._value
-  //       this.$message({
-  //         message: '阀值超过最大值2147483647',
-  //         type: 'warning',
-  //         duration: 3000
-  //       })
-  //     }
-  //   }
-  // }
+  // 图片检测
+  startCheck() {
+    if (this.allImgList.length === 0) {
+      this.$message({
+        message: '请先上传文件夹',
+        type: 'warning',
+        duration: 3000
+      })
+      return
+    }
+    if (this.value8 === '') {
+      this.$message({
+        message: '阀值不能为空',
+        type: 'error',
+        duration: 3000
+      })
+    } else {
+      this.loading = true
+      // 数据使用后将当前模块取消激活
+      this.$store.dispatch('setModuleActionStatus', {
+        moduleName: 'autoDetection',
+        action: 'detectAction',
+        active: true
+      })
+      let that = this
+      this.timeOut = setTimeout(function() {
+        try {
+          window.AutoDetectionActions.detectAction(that.value8)
+        } catch (error) {
+          console.log(error)
+        }
+      }, 500)
+    }
+  }
+
+  // 图片检测回调
+  onDetection(detectFileInfo) {
+    // 正在检测
+    if (detectFileInfo.isChecking) {
+      return
+    }
+
+    const isActionActive = this.$store.getters.isModuleActionActive('autoDetection', 'detectAction')
+    if (!isActionActive) {
+      return
+    }
+
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'autoDetection',
+      action: 'detectAction',
+      active: false
+    })
+    this.loading = false
+    this.allImgList = detectFileInfo.directoryInfos
+    if (detectFileInfo.directoryInfos.length) {
+      this.allImgList.forEach(item => {
+        item.fileType = item.name.substring(item.name.indexOf('.') + 1, item.name.length + 1).toLowerCase()
+      })
+      this.$nextTick(() => {
+        if (this.activeItem === 1) {
+          this.noNormalList = []
+          this.getImgDistance()
+        } else {
+          this.getImgDistanceNo()
+        }
+      })
+    } else {
+      this.noNormalList = []
+    }
+    this.$message({
+      message: '清晰度检测完成',
+      type: 'success',
+      duration: 3000
+    })
+    this.changeTab(2)
+  }
+
+  // 切换tab
   changeTab(type: number) {
     if (this.activeItem !== type) {
       this.activeItem = type
@@ -304,21 +395,14 @@ export default class AutoDetection extends Vue {
     if (this.activeItem === 2) {
       this.noNormalList = []
       this.allImgList.forEach(item => {
-        if (
-          item.isDetected &&
-          parseInt(item.detectValue) < parseInt(this.value8)
-        ) {
+        if (item.isDetected && parseInt(item.detectValue) < parseInt(this.value8)) {
           this.noNormalList.push(item)
         }
       })
-      console.log(this.noNormalList)
       let that = this
       this.timeOut1 = setTimeout(() => {
         that.getImgDistanceNo()
       }, 10)
-      // this.$nextTick(() => {
-      //   this.getImgDistanceNo()
-      // })
     } else {
       this.$nextTick(() => {
         this.getImgDistance()
@@ -326,6 +410,7 @@ export default class AutoDetection extends Vue {
     }
   }
 
+  // 预览图片
   previewImg(item) {
     this.cancelPreviewFlag = false
     if (this.activeItem === 2) {
@@ -338,11 +423,6 @@ export default class AutoDetection extends Vue {
       })
     }
     this.imgObj = item
-  }
-
-  // 选择文件夹
-  getDirectories() {
-    window.AutoDetectionActions.upLoadDirectory()
   }
 
   // 获取全部图片间的间距
@@ -378,20 +458,17 @@ export default class AutoDetection extends Vue {
       this.distanceNo = extra / (this.noNormalNum - 1)
       if (this.distanceNo < 10) {
         this.noNormalNum = this.noNormalNum - 1
-        this.distanceNo =
-          (width - this.noNormalNum * 120) / (this.noNormalNum - 1)
+        this.distanceNo = (width - this.noNormalNum * 120) / (this.noNormalNum - 1)
       }
     }
   }
 
+  // 阈值变化
   change() {
     if (this.value8 === '') {
       this.value8 = this.defaultValue
     }
-    if (
-      !/(^[1-9]\d*$)/.test(this.value8) ||
-      parseInt(this.value8) > 2147483647
-    ) {
+    if (!/(^[1-9]\d*$)/.test(this.value8) || parseInt(this.value8) > 2147483647) {
       this.$message({
         message: '阀值必须为大于0的整数，且不能超过2147483647',
         type: 'warning',
@@ -402,10 +479,7 @@ export default class AutoDetection extends Vue {
     if (this.activeItem === 2) {
       this.noNormalList = []
       this.allImgList.forEach(item => {
-        if (
-          item.isDetected &&
-          parseInt(item.detectValue) < parseInt(this.value8)
-        ) {
+        if (item.isDetected && parseInt(item.detectValue) < parseInt(this.value8)) {
           this.noNormalList.push(item)
         }
       })
@@ -415,34 +489,26 @@ export default class AutoDetection extends Vue {
     }
   }
 
-  // 开始检测
-  startCheck() {
-    console.log(this.value8)
-    if (this.allImgList.length === 0) {
-      this.$message({
-        message: '请先上传文件夹',
-        type: 'warning',
-        duration: 3000
-      })
-      return
-    }
-    if (this.value8 === '') {
-      this.$message({
-        message: '阀值不能为空',
-        type: 'error',
-        duration: 3000
-      })
-    } else {
-      this.checkFlag = true
-      this.loading = true
-      let that = this
-      this.timeOut = setTimeout(function() {
-        window.AutoDetectionActions.detectAction(that.value8)
-      }, 500)
-    }
+  // 清空数据
+  clearData() {
+    this.activeItem = 1
+    this.cancelPreviewFlag = true
+    this.distance = 0
+    this.distanceNo = 0
+    this.num = 0
+    this.noNormalNum = 0
+    this.allImgList = []
+    this.timeOut = null
+    this.timeOut1 = null
+    this.noNormalList = []
+    this.loading = false
+    this.uploadLoading = false
+    this.imgObj = {}
+    this.value8 = this.defaultValue
   }
 }
 </script>
+
 <style lang="scss">
 #autoDetection {
   height: 100%;

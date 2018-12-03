@@ -19,8 +19,24 @@
                   </svg>
                 </span>   
               </div>
+
+              <div class="item-content-text" :title="file.name">
+              <span class="file-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use :xlink:href="adapterFileName(file)"></use>
+                  </svg>
+              </span>
+              <span class="file-text">{{file.name}}</span>
             </div>
-            <div class="item-content-text" :title="file.name">{{file.name}}</div>
+            </div>
+            <!-- <div class="item-content-text" :title="file.name">
+              <span class="file-icon">
+                  <svg class="icon" aria-hidden="true">
+                    <use xlink:href="#icon-icon-PDFwenjian"></use>
+                  </svg>
+              </span>
+              <span class="file-text">{{file.name}}</span>
+            </div> -->
         </div>
     </div>
 </template>
@@ -65,6 +81,9 @@ export default class FileContent extends Vue {
 
   // 点击预览
   dblclickToPreview(file) {
+    if (file.type === 1) {
+      return
+    }
     this.$root.$data.eventHub.$emit('dblclickToPreviewEvent', file)
   }
 
@@ -77,10 +96,61 @@ export default class FileContent extends Vue {
     if (images.indexOf(extension) < 0) {
       imgUrl = '../assets/noLegalImg.png'
     }
-    if (this.isDebug) {
+
+    // 开发环境
+    if (process.env.NODE_ENV === 'development') {
       imgUrl = 'http://i7.hexunimg.cn/2013-08-13/157022446.jpg'
     }
     return imgUrl
+  }
+
+  // 文件图标map function
+  adapterFileName(file) {
+    if (file.type === 1) {
+      // 为一个文件夹，则显示文件夹图标
+      return '#icon-icon-wenjianjia'
+    } else if (file.type === 0) {
+      /* eslint-disable */
+      let extendName: string = ''
+      let temp: any = []
+      if (file.name.indexOf('.') < 0) {
+        extendName = file.name.toLowerCase()
+      } else {
+        temp = file.name.split('.')
+        extendName = temp[temp.length - 1].toLowerCase()
+      }
+
+      switch (extendName) {
+        case 'pdf':
+          return '#icon-icon-PDFwenjian'
+        case 'ppt':
+          return '#icon-icon-pptwenjian'
+        case 'pptx':
+          return '#icon-icon-pptwenjian'
+        case 'xls':
+          return '#icon-icon-excelwenjian'
+        case 'xlsx':
+          return '#icon-icon-excelwenjian'
+        case 'docx':
+          return '#icon-icon-wordwenjian'
+        case 'doc':
+          return '#icon-icon-wordwenjian'
+        case 'jpeg':
+          return '#icon-icon-tupianwenjian'
+        case 'jpg':
+          return '#icon-icon-tupianwenjian'
+        case 'tif':
+          return '#icon-icon-tupianwenjian'
+        case 'tiff':
+          return '#icon-icon-tupianwenjian'
+        case 'png':
+          return '#icon-icon-tupianwenjian'
+        case 'bmp':
+          return '#icon-icon-tupianwenjian'
+        default:
+          return '#icon-icon-qitawenjian'
+      }
+    }
   }
 }
 </script>
@@ -203,6 +273,11 @@ $clickBlue: #2e96f7;
     white-space: nowrap;
     font-size: 12px;
     margin: 0 auto;
+    span {
+      &.file-icon {
+        display: none;
+      }
+    }
   }
 }
 </style>

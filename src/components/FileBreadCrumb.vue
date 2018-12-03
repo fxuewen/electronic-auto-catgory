@@ -1,6 +1,6 @@
 <template>
     <el-breadcrumb separator="/" class="auto-category-bread-crumb">
-      <el-breadcrumb-item v-for="(item,index) in breadCrumbs" @click.native="getNowCrumb(item,index)" :key="index">{{item.label}}</el-breadcrumb-item>
+      <el-breadcrumb-item v-for="(item,index) in breadCrumbs" @click.native="getNowCrumb(item,index)" :key="index" :style="{ 'max-width': 100 / breadCrumbs.length + '%' }" :title="item.label">{{item.label}}</el-breadcrumb-item>
     </el-breadcrumb>
 </template>
 
@@ -44,6 +44,21 @@ export default class Demo extends Vue {
 <style lang="scss">
 .auto-category-bread-crumb {
   display: inline-block;
+  width: calc(100% - 12px);
+  position: relative;
+  vertical-align: middle;
+
+  .el-breadcrumb__item {
+    // position: relative;
+    display: inline-flex;
+
+    .el-breadcrumb__inner {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      // width: 100%;
+    }
+  }
 
   .el-breadcrumb__inner.is-link {
     font-weight: 500;

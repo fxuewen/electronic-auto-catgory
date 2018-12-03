@@ -63,34 +63,51 @@ export default class AutoCategory extends Vue {
 
   mounted() {
     this.$nextTick(function() {
-      this.$root.$data.eventHub.$on('index', (data: any) => {
-        this.uploadDirectoryImgCallback(data.catogoryInfo)
-        this.uploadDirectoryFolderCallback(data.catogoryFiles)
-        this.getFilesCallback(data.getFiles)
-        this.updateTreeData(data.addDirectories)
-      })
-      this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
-        this.breadCrumbs = []
-        let selectNode = node
-        // 面包屑只显示到文件夹
-        if (node.data.type === 1) {
-          this.breadCrumbs.push({
-            id: node.data.id,
-            level: node.level,
-            label: node.label
-          })
-        } else {
-          selectNode = node.parent
-        }
-
-        this.pushBreadCrumbs(node)
-        this.selectTreeNode = selectNode
-      })
-      this.$root.$data.eventHub.$on('updateNowCrumb', (data: any) => {
-        console.log(data)
-      })
+      // 解绑事件
+      this.offEvent()
+      // 绑定事件
+      this.bindEvent()
     })
   }
+
+  // 绑定事件
+  bindEvent() {
+    this.$root.$data.eventHub.$on('index', (data: any) => {
+      this.uploadDirectoryImgCallback(data.catogoryInfo)
+      this.uploadDirectoryFolderCallback(data.catogoryFiles)
+      this.getFilesCallback(data.getFiles)
+      this.updateTreeData(data.addDirectories)
+    })
+    this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
+      this.breadCrumbs = []
+      let selectNode = node
+      // 面包屑只显示到文件夹
+      if (node.data.type === 1) {
+        this.breadCrumbs.push({
+          id: node.data.id,
+          level: node.level,
+          label: node.label
+        })
+      } else {
+        selectNode = node.parent
+      }
+
+      this.pushBreadCrumbs(node)
+      this.selectTreeNode = selectNode
+    })
+    this.$root.$data.eventHub.$on('updateNowCrumb', (data: any) => {
+      console.log(data)
+    })
+
+    this.$root.$data.eventHub.$on('page2login', this.clearData)
+  }
+
+  // 解绑事件
+  offEvent() {
+    this.$root.$data.eventHub.$off('index')
+    this.$root.$data.eventHub.$off('setSelectTreeNode')
+  }
+
   pushBreadCrumbs(node) {
     if (node.level > 1) {
       this.breadCrumbs.push({
@@ -102,6 +119,7 @@ export default class AutoCategory extends Vue {
       this.pushBreadCrumbs(node.parent)
     }
   }
+
   compare(obj1, obj2) {
     let val1 = obj1.level
     let val2 = obj2.level
@@ -112,10 +130,6 @@ export default class AutoCategory extends Vue {
     } else {
       return 0
     }
-  }
-  destroyed() {
-    this.$root.$data.eventHub.$off('index')
-    this.$root.$data.eventHub.$off('setSelectTreeNode')
   }
 
   // 上传目录图片
@@ -135,10 +149,8 @@ export default class AutoCategory extends Vue {
 
   // 上传目录图片回调
   uploadDirectoryImgCallback(catogoryInfo) {
-    const isActionActive = this.$store.getters.isModuleActionActive(
-      'index',
-      'uploadDirectoryImg'
-    )
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'uploadDirectoryImg')
+
     if (!isActionActive) {
       return
     }
@@ -177,10 +189,7 @@ export default class AutoCategory extends Vue {
         this.loading.show = false
         this.loading.text = ''
         if (catogoryInfo.data.path.indexOf(this.treeData[0].fullName) > -1) {
-          this.$root.$data.eventHub.$emit(
-            'uploadDirectoryImgSuccess',
-            catogoryInfo.data
-          )
+          this.$root.$data.eventHub.$emit('uploadDirectoryImgSuccess', catogoryInfo.data)
         } else {
           this.$alert('请在当前卷宗目录中选择目录图片', '提示', {
             type: 'warning'
@@ -207,10 +216,7 @@ export default class AutoCategory extends Vue {
 
   // 上传目录文件夹回调
   uploadDirectoryFolderCallback(catogoryFiles) {
-    const isActionActive = this.$store.getters.isModuleActionActive(
-      'index',
-      'uploadDirectoryFloder'
-    )
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'uploadDirectoryFloder')
     if (!isActionActive) {
       return
     }
@@ -228,10 +234,7 @@ export default class AutoCategory extends Vue {
 
     const data = catogoryFiles[0]
     if (data.fullName.indexOf(this.treeData[0].fullName) > -1) {
-      this.$root.$data.eventHub.$emit(
-        'uploadDirectoryFolderSuccess',
-        catogoryFiles
-      )
+      this.$root.$data.eventHub.$emit('uploadDirectoryFolderSuccess', catogoryFiles)
     } else {
       this.$alert('请在当前卷宗目录中选择文件夹', '提示', {
         type: 'warning'
@@ -241,10 +244,7 @@ export default class AutoCategory extends Vue {
 
   // 上传文件回调
   getFilesCallback(files) {
-    const isActionActive = this.$store.getters.isModuleActionActive(
-      'index',
-      'getFiles'
-    )
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'getFiles')
     if (!isActionActive) {
       return
     }
@@ -271,10 +271,7 @@ export default class AutoCategory extends Vue {
 
   // 更新树形结构数据
   updateTreeData(data: Array<Object>) {
-    const isActionActive = this.$store.getters.isModuleActionActive(
-      'index',
-      'getDirectoryInfo'
-    )
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'getDirectoryInfo')
     if (!isActionActive) {
       return
     }
@@ -286,7 +283,11 @@ export default class AutoCategory extends Vue {
     })
 
     const treeData: any = data[0]
-    if (!treeData || treeData.children.length === 0) {
+    if (!treeData) {
+      return
+    }
+
+    if (treeData.children.length === 0) {
       this.$alert('案件文件夹不能为空', '提示', {
         type: 'warning'
       })
@@ -308,13 +309,18 @@ export default class AutoCategory extends Vue {
       type: 'warning'
     })
       .then(() => {
-        this.treeData = []
-        this.selectTreeNode = null
-        this.breadCrumbs = []
+        this.clearData()
       })
       .catch(() => {
         this.$message('已取消')
       })
+  }
+
+  // 清空数据
+  clearData() {
+    this.treeData = []
+    this.selectTreeNode = null
+    this.breadCrumbs = []
   }
 
   // 生成卷宗
@@ -412,11 +418,14 @@ $clickBlue: #2e96f7;
       line-height: 55px;
       background-color: #fff;
       border-bottom: 1px solid #ddd;
+      position: relative;
 
       .main-header-title {
         margin-left: 16px;
         padding-left: 8px;
         position: relative;
+        display: inline-block;
+        width: calc(100% - 240px);
 
         &::before {
           vertical-align: middle;
