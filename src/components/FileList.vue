@@ -6,7 +6,7 @@
       <el-checkbox v-if="false" class="select" v-model="checkAll" @change="selectAll">全选</el-checkbox>
     </div>
 
-     <div v-if="selectTreeNode.data.type === 1 && selectTreeNode.data.children.length === 0" class="no-result">
+     <div :class="['file-list-container-scrollbar', {'boardOpend': !cancelPreviewFlag}]" v-if="selectTreeNode.data.type === 1 && selectTreeNode.data.children.length === 0" class="no-result">
       <img src="../assets/no_result.png">
       <p>该文件夹为空</p>
     </div>

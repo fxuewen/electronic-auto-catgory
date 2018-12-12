@@ -3,7 +3,8 @@
       <el-scrollbar>
         <el-tree ref="elTree" :data="treeData" :props="defaultProps" 
           highlight-current node-key="id" :expand-on-click-node="false" :check-on-click-node="true"
-          :draggable="dragable" :allow-drop="allowDrop" @current-change="currentNodeChange" @node-expand="onNodeExpand" @node-collapse="onNodeCollapse">
+            :draggable="dragable" :allow-drag="allowDrag" :allow-drop="allowDrop" @node-drag-start="handleDragStart"   @node-drag-end="handleDragEnd"
+            @current-change="currentNodeChange" @node-expand="onNodeExpand" @node-collapse="onNodeCollapse">
           <span class="custom-tree-node" slot-scope="{ node, data }">
             <span class="custom-tree-node-label">
               <span class="custom-tree-node-icon">
@@ -101,6 +102,8 @@ export default class CatgoryTree extends Vue {
   dragResult: boolean = true
   // 是否需要顺移
   isShiftMove: boolean = false
+  // 树节点拖动缓存(记录拖动前位置，用于拖动还原)
+  treeDragTemp: any = {}
 
   created() {}
 
@@ -169,15 +172,65 @@ export default class CatgoryTree extends Vue {
     }
   }
 
+  // 节点是否允许被拖动
+  allowDrag(draggingNode) {
+    return draggingNode.level > 1
+  }
+
   // 树节点拖动是否允许放置
   allowDrop(draggingNode, dropNode, type) {
-    if (dropNode.level === 1 && type === 'prev') {
+    if (dropNode.level === 1) {
       return false
     }
     if (dropNode.data.type === 0 && type === 'inner') {
       return false
     }
     return true
+  }
+
+  // 拖动开始
+  handleDragStart(node, ev) {
+    const parentNode = node.parent
+    const parentData: FileObject = parentNode.data
+    const index = parentData.children.findIndex(child => node.data === child)
+    const nodeData = node.data
+    if (index > -1) {
+      this.treeDragTemp = { parentNode, nodeData, index }
+    }
+  }
+
+  // 拖动结束
+  handleDragEnd(draggingNode, dropNode, dropType, ev) {
+    const originParent = this.treeDragTemp.parentNode
+    const data = JSON.parse(JSON.stringify(this.treeDragTemp.nodeData))
+    const index = this.treeDragTemp.index
+
+    this.$nextTick(() => {
+      let parentNode = dropNode
+      if (dropType !== 'inner') {
+        parentNode = dropNode.parent
+      }
+
+      // 判断拖动后的节点内是否有重名节点
+      const dropIndex = parentNode.data.children.findIndex(
+        (child: FileObject) => child.name === data.name && child.id !== data.id
+      )
+      if (dropIndex > -1) {
+        // 存在同名节点，还原拖动操作
+        const nodeIndex = parentNode.data.children.findIndex((child: FileObject) => child.id === data.id)
+        const node = parentNode.childNodes[nodeIndex]
+        node.remove()
+        this.$nextTick(() => {
+          originParent.insertChild({ data }, index)
+          this.$alert('拖动对象在目标文件夹中已存在,已还原拖动操作', '提示', {
+            type: 'warning'
+          })
+        })
+      }
+    })
+
+    // 还原临时缓存
+    this.treeDragTemp = {}
   }
 
   // 当前节点变化

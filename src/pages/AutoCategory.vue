@@ -77,6 +77,8 @@ export default class AutoCategory extends Vue {
       this.uploadDirectoryFolderCallback(data.catogoryFiles)
       this.getFilesCallback(data.getFiles)
       this.updateTreeData(data.addDirectories)
+      this.createCataloguesCallback(data.CreateCataloguesInfo)
+      this.createCataloguesMenuCallback(data.CreateCataloguesMenuInfo)
     })
     this.$root.$data.eventHub.$on('setSelectTreeNode', (node: any) => {
       this.breadCrumbs = []
@@ -325,23 +327,136 @@ export default class AutoCategory extends Vue {
 
   // 生成卷宗
   createDossier() {
-    const dataStr = JSON.stringify(this.treeData)
+    if (this.treeData.length === 0 || this.treeData[0].children.length === 0) {
+      this.$alert('请确保您的卷宗目录不为空时再进行操作', '提示', {
+        type: 'warning'
+      })
+      return
+    }
 
-    try {
-      window.IndexActions.createCatalogues(dataStr)
-    } catch (error) {
-      console.log(error)
+    this.$confirm('卷宗制作过程中将不能操作鼠标和键盘，否则会影响卷宗制作, 是否继续?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      closeOnClickModal: false,
+      type: 'warning'
+    })
+      .then(() => {
+        this.$store.dispatch('setModuleActionStatus', {
+          moduleName: 'index',
+          action: 'createCatalogues',
+          active: true
+        })
+        const dataStr = JSON.stringify(this.treeData)
+
+        try {
+          this.loading.show = true
+          this.loading.text = '卷宗正在制作，请勿操作鼠标或键盘'
+          window.IndexActions.createCatalogues(dataStr)
+        } catch (error) {
+          console.log(error)
+        }
+      })
+      .catch(() => {
+        this.$message('已取消')
+      })
+  }
+
+  // 卷宗制作回调
+  createCataloguesCallback(createCataloguesInfo) {
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'createCatalogues')
+    if (!isActionActive) {
+      return
+    }
+    if (!createCataloguesInfo) {
+      return
+    }
+
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'createCatalogues',
+      active: false
+    })
+
+    this.loading.show = false
+    this.loading.text = ''
+    if (createCataloguesInfo.code === '200') {
+      this.$message({
+        message: createCataloguesInfo.message,
+        type: 'success'
+      })
+    } else {
+      this.$message({
+        message: createCataloguesInfo.message,
+        type: 'warning'
+      })
     }
   }
 
   // 生成目录
   createCategory() {
-    const dataStr = JSON.stringify(this.treeData)
+    if (this.treeData.length === 0 || this.treeData[0].children.length === 0) {
+      this.$alert('请确保您的卷宗目录不为空时再进行操作', '提示', {
+        type: 'warning'
+      })
+      return
+    }
 
-    try {
-      window.IndexActions.createCataloguesMenu(dataStr)
-    } catch (error) {
-      console.log(error)
+    this.$confirm('目录生成过程中将不能操作鼠标和键盘，否则会影响目录生成, 是否继续?', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      closeOnClickModal: false,
+      type: 'warning'
+    })
+      .then(() => {
+        this.$store.dispatch('setModuleActionStatus', {
+          moduleName: 'index',
+          action: 'createCataloguesMenu',
+          active: true
+        })
+        const dataStr = JSON.stringify(this.treeData)
+
+        try {
+          this.loading.show = true
+          this.loading.text = '目录正在生成，请勿操作鼠标或键盘'
+          window.IndexActions.createCataloguesMenu(dataStr)
+        } catch (error) {
+          console.log(error)
+        }
+      })
+      .catch(() => {
+        this.$message('已取消')
+      })
+  }
+
+  // 卷宗制作回调
+  createCataloguesMenuCallback(createCataloguesMenuInfo) {
+    const isActionActive = this.$store.getters.isModuleActionActive('index', 'createCataloguesMenu')
+    if (!isActionActive) {
+      return
+    }
+    if (!createCataloguesMenuInfo) {
+      return
+    }
+
+    // 数据使用后将当前模块取消激活
+    this.$store.dispatch('setModuleActionStatus', {
+      moduleName: 'index',
+      action: 'createCataloguesMenu',
+      active: false
+    })
+    this.loading.show = false
+    this.loading.text = ''
+    if (createCataloguesMenuInfo.code === '200') {
+      this.$message({
+        message: createCataloguesMenuInfo.message,
+        type: 'success'
+      })
+    } else {
+      this.$message({
+        message: createCataloguesMenuInfo.message,
+        type: 'warning'
+      })
     }
   }
 }
@@ -412,6 +527,7 @@ $clickBlue: #2e96f7;
     background-color: #fff;
     padding: 0;
     position: relative;
+    overflow: hidden;
 
     .main-header {
       height: 55px;
